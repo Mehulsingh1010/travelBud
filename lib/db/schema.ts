@@ -21,6 +21,15 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).default("user"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+
+  phoneNumber: varchar("phone_number", { length: 15 }),
+  address: text("address"),
+  description: text("description"),
+
+  // store if each detail is Aadhaar-verified
+  isNameVerified: boolean("is_name_verified").default(false),
+  isPhoneVerified: boolean("is_phone_verified").default(false),
+  isAddressVerified: boolean("is_address_verified").default(false),
 })
 
 export const trips = pgTable("trips", {
