@@ -7,6 +7,7 @@ type User = {
   email: string;
   avatarUrl?: string;
   phoneNumber?: string;
+  countryCode?: string;
   address?: string;
   description?: string;
   isNameVerified: boolean;
@@ -68,12 +69,31 @@ export default function ProfilePage() {
       <div className="space-y-4">
         <div>
           <label className="block text-sm">Phone Number</label>
-          <input
-            type="text"
-            value={user.phoneNumber || ""}
-            onChange={(e) => setUser({ ...user, phoneNumber: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 mt-1"
-          />
+          <div className="flex gap-2">
+            {/* Country Code Selector */}
+            <select
+              value={user.countryCode || "+91"}
+              onChange={(e) => setUser({ ...user, countryCode: e.target.value })}
+              className="border rounded-lg px-2 py-2"
+            >
+              <option value="+91">🇮🇳 +91</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+81">🇯🇵 +81</option>
+            </select>
+            <input
+              type="text"
+              value={user.phoneNumber || ""}
+              onChange={(e) => {
+                // Allow only digits
+                const val = e.target.value.replace(/\D/g, "");
+                setUser({ ...user, phoneNumber: val });
+              }}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Enter phone number"
+            />
+          </div>
+          
           {user.isPhoneVerified ? (
             <span className="text-green-600 text-sm">✓ Verified</span>
           ) : (

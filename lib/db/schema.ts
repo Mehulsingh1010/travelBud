@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 
   phoneNumber: varchar("phone_number", { length: 15 }),
+  countryCode: varchar("country_code", { length: 5 }),
   address: text("address"),
   description: text("description"),
 

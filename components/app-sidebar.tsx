@@ -152,6 +152,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 side="top"
                 className="w-[--radix-popper-anchor-width] bg-white shadow-lg border border-slate-200"
               >
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <a href="/profile" className="flex items-center w-full">
+                    <Users className="w-4 h-4 mr-2" />
+                    <span>Profile</span>
+                  </a>
+                </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer">
                   <Settings className="w-4 h-4 mr-2" />
                   <span>Settings</span>
