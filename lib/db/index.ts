@@ -1,6 +1,10 @@
-import { drizzle } from "drizzle-orm/neon-http"
-import { neon } from "@neondatabase/serverless"
-import * as schema from "./schema"
+import { drizzle } from "drizzle-orm/neon-serverless"
+import { Pool } from "@neondatabase/serverless"
+import * as centralSchema from "./schema"
+import * as paymentSchema from "./payments"
+const schema = { ...centralSchema, ...paymentSchema }
 
-const sql = neon('postgresql://neondb_owner:npg_xTpfcLlk23id@ep-odd-leaf-a8kkpjio-pooler.eastus2.azure.neon.tech/neondb?sslmode=require');
-export const db = drizzle(sql, { schema })
+const pool = new Pool({
+  connectionString: 'postgresql://neondb_owner:npg_xTpfcLlk23id@ep-odd-leaf-a8kkpjio-pooler.eastus2.azure.neon.tech/neondb?sslmode=require'
+});
+export const db = drizzle(pool, { schema })
