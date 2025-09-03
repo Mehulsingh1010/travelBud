@@ -123,7 +123,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <Link href="/">
           <div className="flex items-center gap-3 mb-8">
             <div className="flex h-10 w-10 items-center justify-center">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg grid place-items-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-[#00e2b7] to-teal-400 rounded-lg grid place-items-center">
                 <Compass className="w-6 h-6 text-white" />
               </div>
             </div>
@@ -135,14 +135,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
         </Link>
 
         {/* User Profile Card */}
-        <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-4 text-white shadow-lg">
+        <div className="rounded-xl bg-gradient-to-br from-[#00e2b7] to-teal-600 p-4 text-white shadow-lg">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white font-medium shadow-inner">
               {user.name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{getUserName()}</p>
-              <p className="text-xs text-blue-100/90 truncate">{user.role}</p>
+              <p className="text-xs text-teal-100/90 truncate">{user.role}</p>
             </div>
           </div>
         </div>
@@ -153,7 +153,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <div className="mb-4 px-2">
           <Button
             onClick={handleQuickCreateTrip}
-            className="w-full justify-between group bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md rounded-lg"
+            className="w-full justify-between group bg-gradient-to-br from-[#00e2b7] to-teal-600 hover:from-teal-600 hover:to-teal-700 shadow-md rounded-lg"
             size="sm"
           >
             <div className="flex items-center gap-2">
@@ -176,17 +176,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   className={cn(
                     "w-full justify-start px-3 py-2.5 rounded-lg relative",
                     "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-                    "data-[active=true]:bg-blue-50 data-[active=true]:text-blue-600",
+                    "data-[active=true]:bg-teal-50 data-[active=true]:text-teal-600",
                     "data-[active=true]:font-medium transition-colors duration-200",
                     isActive &&
-                      "before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-2/3 before:w-1 before:bg-blue-600 before:rounded-r-full"
+                      "before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-2/3 before:w-1 before:bg-[#00e2b7] before:rounded-r-full"
                   )}
                 >
                   <a href={item.url} className="flex items-center gap-3 w-full">
                     <div
                       className={cn(
                         "p-1.5 rounded-lg",
-                        isActive ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
+                        isActive ? "bg-teal-100 text-teal-600" : "bg-gray-100 text-gray-600"
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -241,11 +241,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 relative text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="h-9 w-9 relative text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
           >
             <Bell className="h-4 w-4" />
             {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#00e2b7] text-white text-xs flex items-center justify-center">
                 {notificationCount}
               </span>
             )}
@@ -254,7 +254,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="h-9 w-9 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -269,7 +269,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <LogOut className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-blue-600 text-white">
+            <AlertDialogContent className="bg-[#00e2b7] text-white">
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
                 <AlertDialogDescription className="text-white">

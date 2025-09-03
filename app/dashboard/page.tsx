@@ -220,9 +220,9 @@ export default function Page() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "planned":
-        return "bg-blue-100 text-blue-700 border-blue-200"
+        return "bg-cyan-50 text-cyan-700 border-cyan-200"
       case "active":
-        return "bg-green-100 text-green-700 border-green-200"
+        return "bg-emerald-50 text-emerald-700 border-emerald-200"
       case "completed":
         return "bg-gray-100 text-gray-700 border-gray-200"
       default:
@@ -245,7 +245,7 @@ export default function Page() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50">
+      <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-teal-50">
         <div className="px-4 pt-4 md:px-6 md:pt-6">
           <HeroBanner name="User" />
         </div>
@@ -261,7 +261,7 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br rounded-lg from-blue-50 to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br rounded-lg from-cyan-50 to-teal-50">
       {/* Hero Section with reduced bottom padding */}
       <div className="px-4 pt-4 pb-2 md:px-6 md:pt-6 md:pb-3">
         <HeroBanner name="User" />
@@ -280,12 +280,12 @@ export default function Page() {
                   onClick={() => setActiveTab("all")}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                     activeTab === "all" 
-                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                      ? "bg-teal-50 text-teal-700 border border-teal-200" 
                       : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg grid place-items-center">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#00e2b7] to-teal-400 rounded-lg grid place-items-center">
                       <MapPin className="w-4 h-4 text-white" />
                     </div>
                     <span className="font-medium">All Trips</span>
@@ -299,12 +299,12 @@ export default function Page() {
                   onClick={() => setActiveTab("created")}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                     activeTab === "created" 
-                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                      ? "bg-teal-50 text-teal-700 border border-teal-200" 
                       : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg grid place-items-center">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#00e2b7] to-emerald-400 rounded-lg grid place-items-center">
                       <Users className="w-4 h-4 text-white" />
                     </div>
                     <span className="font-medium">Created by Me</span>
@@ -318,12 +318,12 @@ export default function Page() {
                   onClick={() => setActiveTab("joined")}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                     activeTab === "joined" 
-                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                      ? "bg-teal-50 text-teal-700 border border-teal-200" 
                       : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg grid place-items-center">
+                    <div className="w-8 h-8 bg-gradient-to-r from-[#00e2b7] to-cyan-400 rounded-lg grid place-items-center">
                       <Users className="w-4 h-4 text-white" />
                     </div>
                     <span className="font-medium">Joined Trips</span>
@@ -337,12 +337,12 @@ export default function Page() {
                   onClick={() => setActiveTab("history")}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                     activeTab === "history" 
-                      ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                      ? "bg-teal-50 text-teal-700 border border-teal-200" 
                       : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg grid place-items-center">
+                    <div className="w-8 h-8 bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg grid place-items-center">
                       <Calendar className="w-4 h-4 text-white" />
                     </div>
                     <span className="font-medium">Trip History</span>
@@ -357,10 +357,10 @@ export default function Page() {
               <div className="mt-6 pt-6 border-t border-slate-200">
                 <h3 className="text-sm font-medium text-slate-900 mb-3">Quick Actions</h3>
                 <div className="space-y-2">
-                  <Button className="w-full justify-start" size="sm" onClick={() => window.location.href = '/dashboard/create-trip'}>
+                  <Button className="w-full justify-start bg-[#00e2b7] hover:bg-teal-600" size="sm" onClick={() => window.location.href = '/dashboard/create-trip'}>
                     Create New Trip
                   </Button>
-                  <Button variant="outline" className="w-full justify-start" size="sm" onClick={() => setIsJoinModalOpen(true)}>
+                  <Button variant="outline" className="w-full justify-start border-teal-300 text-teal-700 hover:bg-teal-50" size="sm" onClick={() => setIsJoinModalOpen(true)}>
                     Join a Trip
                   </Button>
                 </div>
@@ -378,7 +378,7 @@ export default function Page() {
                     onClick={() => setActiveTab("all")}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
                       activeTab === "all" 
-                        ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                        ? "bg-teal-50 text-teal-700 border border-teal-200" 
                         : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                     }`}
                   >
@@ -391,7 +391,7 @@ export default function Page() {
                     onClick={() => setActiveTab("created")}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
                       activeTab === "created" 
-                        ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                        ? "bg-teal-50 text-teal-700 border border-teal-200" 
                         : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                     }`}
                   >
@@ -404,7 +404,7 @@ export default function Page() {
                     onClick={() => setActiveTab("joined")}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
                       activeTab === "joined" 
-                        ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                        ? "bg-teal-50 text-teal-700 border border-teal-200" 
                         : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                     }`}
                   >
@@ -417,7 +417,7 @@ export default function Page() {
                     onClick={() => setActiveTab("history")}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
                       activeTab === "history" 
-                        ? "bg-blue-50 text-blue-700 border border-blue-200" 
+                        ? "bg-teal-50 text-teal-700 border border-teal-200" 
                         : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                     }`}
                   >
@@ -437,7 +437,7 @@ export default function Page() {
                     placeholder="Search trips..."
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
-                    className="bg-slate-50 border-slate-200"
+                    className="bg-slate-50 border-slate-200 focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                   />
                 </div>
                 
@@ -451,11 +451,11 @@ export default function Page() {
                   
                   <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2">
+                      <Button variant="outline" className="flex items-center gap-2 border-teal-300 text-teal-700 hover:bg-teal-50">
                         <Filter className="w-4 h-4" />
                         <span className="hidden sm:inline">Filters</span>
                         {hasActiveFilters && (
-                          <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full ml-1">
+                          <span className="bg-[#00e2b7] text-white text-xs px-2 py-1 rounded-full ml-1">
                             Active
                           </span>
                         )}
@@ -474,13 +474,14 @@ export default function Page() {
                               placeholder="Greece, Tokyo..."
                               value={tempFilters.location || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, location: e.target.value }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                           <div>
                             <Label htmlFor="status">Status</Label>
                             <select
                               id="status"
-                              className="mt-2 block w-full rounded-md border border-slate-200 bg-white p-2 text-sm"
+                              className="mt-2 block w-full rounded-md border border-slate-200 bg-white p-2 text-sm focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                               value={tempFilters.status || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, status: e.target.value as "open" | "closed" | "" }))}
                             >
@@ -501,6 +502,7 @@ export default function Page() {
                               placeholder="7"
                               value={tempFilters.days || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, days: Number(e.target.value) }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                           <div>
@@ -512,6 +514,7 @@ export default function Page() {
                               placeholder="4"
                               value={tempFilters.people || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, people: Number(e.target.value) }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                         </div>
@@ -526,6 +529,7 @@ export default function Page() {
                               placeholder="0"
                               value={tempFilters.feeMin || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, feeMin: Number(e.target.value) }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                           <div>
@@ -537,6 +541,7 @@ export default function Page() {
                               placeholder="5000"
                               value={tempFilters.feeMax || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, feeMax: Number(e.target.value) }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                         </div>
@@ -549,6 +554,7 @@ export default function Page() {
                               type="date"
                               value={tempFilters.dateFrom || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                           <div>
@@ -558,6 +564,7 @@ export default function Page() {
                               type="date"
                               value={tempFilters.dateTo || ""}
                               onChange={(e) => setTempFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                             />
                           </div>
                         </div>
@@ -580,7 +587,7 @@ export default function Page() {
                           <Button variant="outline" onClick={() => setIsFilterOpen(false)}>
                             Cancel
                           </Button>
-                          <Button onClick={handleApplyFilters}>
+                          <Button onClick={handleApplyFilters} className="bg-[#00e2b7] hover:bg-teal-600">
                             Apply Filters
                           </Button>
                         </div>
@@ -609,7 +616,7 @@ export default function Page() {
                 <div className="lg:hidden">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="border-teal-300 text-teal-700 hover:bg-teal-50">
                         <Menu className="w-4 h-4 mr-1" />
                         Actions
                       </Button>
@@ -619,10 +626,10 @@ export default function Page() {
                         <DialogTitle>Quick Actions</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-3 py-4">
-                        <Button className="w-full justify-start" onClick={() => window.location.href = '/dashboard/create-trip'}>
+                        <Button className="w-full justify-start bg-[#00e2b7] hover:bg-teal-600" onClick={() => window.location.href = '/dashboard/create-trip'}>
                           Create New Trip
                         </Button>
-                        <Button variant="outline" className="w-full justify-start" onClick={() => setIsJoinModalOpen(true)}>
+                        <Button variant="outline" className="w-full justify-start border-teal-300 text-teal-700 hover:bg-teal-50" onClick={() => setIsJoinModalOpen(true)}>
                           Join a Trip
                         </Button>
                       </div>
@@ -634,7 +641,7 @@ export default function Page() {
               {/* Loading State */}
               {isLoading ? (
                 <div className="text-center py-12">
-                  <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <div className="animate-spin w-8 h-8 border-2 border-[#00e2b7] border-t-transparent rounded-full mx-auto mb-4"></div>
                   <p className="text-slate-600">Loading trips...</p>
                 </div>
               ) : (
@@ -653,8 +660,8 @@ export default function Page() {
                     </div>
                   ) : (
                     <div className="text-center py-12 md:py-16 bg-white rounded-2xl border border-slate-200">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full grid place-items-center mx-auto mb-4">
-                        <MapPin className="w-8 h-8 text-slate-400" />
+                      <div className="w-16 h-16 bg-teal-50 rounded-full grid place-items-center mx-auto mb-4">
+                        <MapPin className="w-8 h-8 text-[#00e2b7]" />
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-2">
                         {activeTab === "all" && "No trips found"}
@@ -669,21 +676,21 @@ export default function Page() {
                         {activeTab === "all" && "Create or join a trip to get started"}
                       </p>
                       {activeTab === "created" && (
-                        <Button onClick={() => window.location.href = '/dashboard/create-trip'}>
+                        <Button onClick={() => window.location.href = '/dashboard/create-trip'} className="bg-[#00e2b7] hover:bg-teal-600">
                           Create Your First Trip
                         </Button>
                       )}
                       {activeTab === "joined" && (
-                        <Button onClick={() => setIsJoinModalOpen(true)}>
+                        <Button onClick={() => setIsJoinModalOpen(true)} className="bg-[#00e2b7] hover:bg-teal-600">
                           Join a Trip
                         </Button>
                       )}
                       {activeTab === "all" && (
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                          <Button onClick={() => window.location.href = '/dashboard/create-trip'}>
+                          <Button onClick={() => window.location.href = '/dashboard/create-trip'} className="bg-[#00e2b7] hover:bg-teal-600">
                             Create Trip
                           </Button>
-                          <Button variant="outline" onClick={() => setIsJoinModalOpen(true)}>
+                          <Button variant="outline" onClick={() => setIsJoinModalOpen(true)} className="border-teal-300 text-teal-700 hover:bg-teal-50">
                             Join Trip
                           </Button>
                         </div>
@@ -705,7 +712,7 @@ export default function Page() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-[#00e2b7] to-teal-400 rounded-2xl flex items-center justify-center">
                 <Plane className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -723,12 +730,12 @@ export default function Page() {
             {/* Step 1: Enter Invite Code */}
             {joinStep === "code" && (
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="font-medium text-blue-900 mb-1">How to Join a Trip</h4>
-                      <ul className="text-sm text-blue-800 space-y-1">
+                      <h4 className="font-medium text-teal-900 mb-1">How to Join a Trip</h4>
+                      <ul className="text-sm text-teal-800 space-y-1">
                         <li>• Get the invite code from the trip organizer</li>
                         <li>• Enter the code below to find the trip</li>
                         <li>• Review details and send your join request</li>
@@ -747,7 +754,7 @@ export default function Page() {
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     placeholder="Enter invite code (e.g., ABC123)"
-                    className="text-center text-lg font-mono tracking-wider"
+                    className="text-center text-lg font-mono tracking-wider focus:border-[#00e2b7] focus:ring-[#00e2b7]"
                     maxLength={10}
                   />
                   <p className="text-sm text-slate-500 text-center">
@@ -758,7 +765,7 @@ export default function Page() {
                 <Button
                   onClick={handleFindTrip}
                   disabled={!inviteCode.trim() || isJoinLoading}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full h-12 bg-gradient-to-r from-[#00e2b7] to-teal-400 hover:from-teal-600 hover:to-teal-500"
                 >
                   {isJoinLoading ? (
                     <>
@@ -826,7 +833,7 @@ export default function Page() {
                       value={joinMessage}
                       onChange={(e) => setJoinMessage(e.target.value)}
                       placeholder="Tell the organizer why you'd like to join this trip..."
-                      className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 min-h-[100px]"
+                      className="border-slate-300 focus:border-[#00e2b7] focus:ring-[#00e2b7] min-h-[100px]"
                       rows={4}
                     />
                     <p className="text-sm text-slate-500">
@@ -834,12 +841,12 @@ export default function Page() {
                     </p>
                   </div>
 
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <Send className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <Send className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="font-medium text-green-900 mb-1">Ready to Send Request</h4>
-                        <p className="text-sm text-green-800">
+                        <h4 className="font-medium text-teal-900 mb-1">Ready to Send Request</h4>
+                        <p className="text-sm text-teal-800">
                           Your join request will be sent to the trip organizer for review. You'll be notified once they make a decision.
                         </p>
                       </div>
@@ -857,7 +864,7 @@ export default function Page() {
                     <Button
                       onClick={handleJoinTrip}
                       disabled={isJoinLoading}
-                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                      className="flex-1 bg-gradient-to-r from-[#00e2b7] to-teal-400 hover:from-teal-600 hover:to-teal-500"
                     >
                       {isJoinLoading ? (
                         <>
@@ -879,7 +886,7 @@ export default function Page() {
             {/* Step 3: Success Message */}
             {joinStep === "success" && (
               <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-r from-[#00e2b7] to-teal-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <Send className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">Request Sent Successfully!</h3>
@@ -887,7 +894,7 @@ export default function Page() {
                   Your join request has been sent to the trip organizer. You'll be notified once they review your request.
                 </p>
                 <div className="space-y-3">
-                  <Button onClick={resetJoinModal} className="w-full">
+                  <Button onClick={resetJoinModal} className="w-full bg-[#00e2b7] hover:bg-teal-600">
                     Close
                   </Button>
                   <p className="text-sm text-slate-500">
