@@ -1,6 +1,8 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { CheckCircle, AlertCircle } from "lucide-react";
 
 type User = {
   name: string;
@@ -37,97 +39,105 @@ export default function ProfilePage() {
     alert("Profile updated!");
   };
 
-  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (loading)
+    return (
+      <p className="text-center mt-10 text-gray-500 animate-pulse">
+        Loading profile...
+      </p>
+    );
+
   if (!user) return <p className="text-center mt-10">No user found</p>;
 
-  const allVerified =
-    user.isNameVerified && user.isPhoneVerified && user.isAddressVerified;
+  const VerifiedBadge = ({ verified }: { verified: boolean }) =>
+    verified ? (
+      <span className="flex items-center gap-1 text-green-600 text-sm">
+        <CheckCircle size={14} /> Verified
+      </span>
+    ) : (
+      <span className="flex items-center gap-1 text-amber-500 text-sm">
+        <AlertCircle size={14} /> Not Verified
+      </span>
+    );
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-lg text-gray-900">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      {/* Profile header */}
+      <div className="rounded-2xl bg-gradient-to-br from-[#00e2b7] to-teal-600 p-6 text-white shadow-lg flex items-center gap-4">
         <div className="relative">
           <Image
             src={user.avatarUrl || "/default-avatar.png"}
             alt="Profile"
             width={80}
             height={80}
-            className="rounded-full border"
+            className="rounded-full border-4 border-white"
           />
-          {allVerified && (
-            <span className="absolute bottom-0 right-0 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-              ✓
-            </span>
-          )}
         </div>
         <div>
-          <h1 className="text-xl font-bold">{user.name}</h1>
-          <p className="text-gray-500">{user.email}</p>
+          <h1 className="text-2xl font-bold">{user.name}</h1>
+          <p className="text-sm text-teal-100">{user.email}</p>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm">Phone Number</label>
-          <div className="flex gap-2">
-            {/* Country Code Selector */}
-            <select
-              value={user.countryCode || "+91"}
-              onChange={(e) => setUser({ ...user, countryCode: e.target.value })}
-              className="border rounded-lg px-2 py-2"
-            >
-              <option value="+91">🇮🇳 +91</option>
-              <option value="+1">🇺🇸 +1</option>
-              <option value="+44">🇬🇧 +44</option>
-              <option value="+81">🇯🇵 +81</option>
-            </select>
-            <input
-              type="text"
-              value={user.phoneNumber || ""}
-              onChange={(e) => {
-                // Allow only digits
-                const val = e.target.value.replace(/\D/g, "");
-                setUser({ ...user, phoneNumber: val });
-              }}
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="Enter phone number"
-            />
-          </div>
-          
-          {user.isPhoneVerified ? (
-            <span className="text-green-600 text-sm">✓ Verified</span>
-          ) : (
-            <button className="text-blue-500 text-sm">Verify</button>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm">Address</label>
-          <textarea
-            value={user.address || ""}
-            onChange={(e) => setUser({ ...user, address: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 mt-1"
+      {/* Phone number */}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <label className="block font-medium mb-2">Phone Number</label>
+        <div className="flex gap-2">
+          <select
+            value={user.countryCode || "+91"}
+            onChange={(e) => setUser({ ...user, countryCode: e.target.value })}
+            className="border rounded-lg px-2 py-2"
+          >
+            <option value="+91">🇮🇳 +91</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+81">🇯🇵 +81</option>
+          </select>
+          <input
+            type="text"
+            value={user.phoneNumber || ""}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "");
+              setUser({ ...user, phoneNumber: val });
+            }}
+            className="flex-1 border rounded-lg px-3 py-2"
+            placeholder="Enter phone number"
           />
-          {user.isAddressVerified ? (
-            <span className="text-green-600 text-sm">✓ Verified</span>
-          ) : (
-            <button className="text-blue-500 text-sm">Verify</button>
-          )}
         </div>
-
-        <div>
-          <label className="block text-sm">Description</label>
-          <textarea
-            value={user.description || ""}
-            onChange={(e) => setUser({ ...user, description: e.target.value })}
-            className="w-full border rounded-lg px-3 py-2 mt-1"
-          />
+        <div className="mt-2">
+          <VerifiedBadge verified={user.isPhoneVerified} />
         </div>
       </div>
 
+      {/* Address */}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <label className="block font-medium mb-2">Address</label>
+        <textarea
+          value={user.address || ""}
+          onChange={(e) => setUser({ ...user, address: e.target.value })}
+          className="w-full border rounded-lg px-3 py-2"
+          rows={3}
+        />
+        <div className="mt-2">
+          <VerifiedBadge verified={user.isAddressVerified} />
+        </div>
+      </div>
+
+      {/* Description */}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <label className="block font-medium mb-2">Description</label>
+        <textarea
+          value={user.description || ""}
+          onChange={(e) => setUser({ ...user, description: e.target.value })}
+          className="w-full border rounded-lg px-3 py-2"
+          rows={3}
+          placeholder="Tell something about yourself..."
+        />
+      </div>
+
+      {/* Save button */}
       <button
         onClick={handleSave}
-        className="mt-6 bg-[#00e2b7] hover:bg-[#00caa3] text-white px-4 py-2 rounded-xl"
+        className="w-full bg-gradient-to-r from-[#00e2b7] to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md transition"
       >
         Save Changes
       </button>
