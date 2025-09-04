@@ -1,6 +1,7 @@
 import { pgTable, serial, integer, varchar } from "drizzle-orm/pg-core";
 import { expenses } from "./expenses";
 import { users } from "../schema";
+import { relations } from "drizzle-orm";
 
 export const expensePayers = pgTable("expense_payers", {
   id: serial("id").primaryKey(),
@@ -10,3 +11,14 @@ export const expensePayers = pgTable("expense_payers", {
   mode: varchar("mode", { length: 20 }).notNull().default("absolute"), // absolute | percentage | shares
   shareValue: integer("share_value"),
 });
+
+export const expensePayersRelations = relations(expensePayers, ({ one }) => ({
+  expense: one(expenses, {
+    fields: [expensePayers.expenseId],
+    references: [expenses.id],
+  }),
+  user: one(users, {
+    fields: [expensePayers.userId],
+    references: [users.id],
+  }),
+}))

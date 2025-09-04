@@ -1,6 +1,9 @@
 // db/schema/expenses.ts
 import { pgTable, serial, integer, varchar, boolean, timestamp, text } from "drizzle-orm/pg-core";
 import {trips, users} from "../schema"
+import { relations } from "drizzle-orm"
+import { expensePayers } from "./expensePayers"
+import { expenseSplits } from "./expenseSplits"
 
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
@@ -17,3 +20,8 @@ export const expenses = pgTable("expenses", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const expensesRelations = relations(expenses, ({ many }) => ({
+  payers: many(expensePayers),
+  splits: many(expenseSplits),
+}))
