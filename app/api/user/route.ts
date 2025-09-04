@@ -34,7 +34,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { phoneNumber, countryCode, address, description, avatarUrl } = body;
+    const { phoneNumber, countryCode, address, description, avatarUrl, isNameVerified, isPhoneVerified, isAddressVerified } = body;
 
     await db
       .update(users)
@@ -44,6 +44,9 @@ export async function PUT(req: Request) {
         address,
         description,
         avatarUrl,
+        isNameVerified,
+        isPhoneVerified,
+        isAddressVerified,
         updatedAt: new Date(),
       })
       .where(eq(users.id, session.userId))
