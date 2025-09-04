@@ -484,18 +484,13 @@ function renderMemberRow(userId: number, name: string, kind: "payer" | "split") 
                   <SelectItem value="shares">Shares</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="text-xs text-slate-500 ml-2">
-                {splitMode === "equal" && <>Even split between selected</>}
-                {splitMode === "absolute" && <>Must sum to total amount</>}
-                {splitMode === "percentage" && <>Must sum to 100%</>}
-                {splitMode === "shares" && <>Whole numbers ≥ 1</>}
-              </div>
             </div>
 
             <div className="rounded-lg border p-3">
               {members.map((m) => renderMemberRow(m.id, m.name, "split"))}
-              {splitMode !== "equal" && (
+              
                 <div className={`mt-2 text-xs ${getHelperClass("split")}`}>
+                    {splitMode === "equal" && <>Even split between selected</>}
                     {splitMode === "absolute" && (
                     <>
                         <span className="font-medium">Current total:</span>{" "}
@@ -515,7 +510,6 @@ function renderMemberRow(userId: number, name: string, kind: "payer" | "split") 
                     </>
                     )}
                 </div>
-              )}
             </div>
           </div>
         </div>
