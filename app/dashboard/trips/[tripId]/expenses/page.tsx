@@ -5,6 +5,7 @@ import { trips, users } from "@/lib/db/schema"
 import { expenses } from "@/lib/db/payments/expenses"
 import { settlements } from "@/lib/db/payments/settlements"
 import { eq, desc } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { notFound } from "next/navigation"
 import { verifySession } from "@/lib/auth/session"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -12,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/expenses/formatCurrency"
 import { getBalances } from "@/lib/expenses/getBalance"
+import SettleUpCard from "@/components/expenses/SettleUpCard"
+
 
 // ---------- TYPES ----------
 type RecentExpense = {
@@ -31,8 +34,32 @@ type RecentSettlement = {
   amount: number
   currency: string
   createdAt: Date | null
+  fromName?: string | null
+  toName?: string | null
 }
 
+export async function getRecentSettlements(tripId: number) {
+  const uf = alias(users, "from_user")
+  const ut = alias(users, "to_user")
+
+  return db
+    .select({
+      id: settlements.id,
+      fromUserId: settlements.fromUserId,
+      toUserId: settlements.toUserId,
+      amount: settlements.amount,
+      currency: settlements.currency,
+      createdAt: settlements.createdAt,
+      fromName: uf.name,
+      toName: ut.name,
+    })
+    .from(settlements)
+    .leftJoin(uf, eq(uf.id, settlements.fromUserId))
+    .leftJoin(ut, eq(ut.id, settlements.toUserId))
+    .where(eq(settlements.tripId, tripId))
+    .orderBy(desc(settlements.createdAt))
+    .limit(10)
+}
 type RecentActivity = RecentExpense | RecentSettlement
 
 // ---------- PAGE ----------
@@ -65,16 +92,11 @@ export default async function ExpensesPage({
     .orderBy(desc(expenses.createdAt))
     .limit(10)
 
-  // Recent settlements
-  const recentSettlements = await db
-    .select()
-    .from(settlements)
-    .where(eq(settlements.tripId, tripId))
-    .orderBy(desc(settlements.createdAt))
-    .limit(10)
+  // Recent settlements WITH names
+  const recentSettlements = await getRecentSettlements(tripId)
 
-  // Merge + sort activity
-  const recentActivity: RecentActivity[] = [
+  // ✅ Build recentActivity carrying names through
+  const recentActivity: (RecentExpense | RecentSettlement)[] = [
     ...recentExpenses.map((e) => ({
       type: "expense" as const,
       id: e.id,
@@ -91,6 +113,8 @@ export default async function ExpensesPage({
       amount: s.amount,
       currency: s.currency,
       createdAt: s.createdAt,
+      fromName: s.fromName,   // ✅ keep names
+      toName: s.toName,       // ✅ keep names
     })),
   ]
     .sort((a, b) => {
@@ -126,50 +150,55 @@ export default async function ExpensesPage({
         </CardHeader>
         <CardContent>
           {balances.per_user.length > 0 ? (
-            <ul className="space-y-2">
-              {balances.per_user.slice(0, 3).map((cp, idx) => (
-                <div key={cp.user_id}>
-                  <li className="grid grid-cols-3 items-center gap-4 py-2">
+            <ul className="divide-y divide-slate-200">
+              {balances.per_user.slice(0, 3).map((cp) => {
+                // amount < 0 => YOU owe THEM
+                const iOweThem = cp.amount < 0
+                return (
+                  <li key={cp.user_id} className="grid grid-cols-3 items-center gap-4 py-3">
                     {/* Left: name */}
-                    <span className="text-left">{cp.name}</span>
-            
-                    {/* Middle: button */}
+                    <span className="text-left font-medium">{cp.name}</span>
+                
+                    {/* Middle: settle button (spacer when not needed to keep alignment) */}
                     <div className="flex justify-center">
-                      {cp.amount < 0 && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="bg-blue-100 text-blue-700"
-                        >
-                          Settle up →
-                        </Button>
+                      {iOweThem ? (
+                        <SettleUpCard
+                          tripId={tripId}
+                          currentUser={{ id: session.userId, name: session.name || "You" }}
+                          counterparty={{
+                            id: cp.user_id,
+                            name: cp.name,
+                            amountOwed: Math.abs(cp.amount), // smallest units
+                            currency,
+                          }}
+                          trigger={
+                            <Button size="sm" variant="secondary" className="bg-blue-100 text-blue-700">
+                              Settle up →
+                            </Button>
+                          }
+                        />
+                      ) : (
+                        <span className="h-6" />
                       )}
                     </div>
-                  
+                    
                     {/* Right: amount */}
                     <span
                       className={`text-right ${
-                        cp.amount > 0
-                          ? "text-green-600 font-medium"
-                          : "text-red-600 font-medium"
+                        cp.amount > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"
                       }`}
                     >
                       {cp.amount > 0 ? "+" : "-"}
                       {formatCurrency(Math.abs(cp.amount), currency)}
                     </span>
                   </li>
-                  
-                  {/* Divider line (skip last item) */}
-                  {idx < balances.per_user.slice(0, 3).length - 1 && (
-                    <div className="h-0.5 bg-gradient-to-r from-transparent via-slate-300 to-transparent my-1" />
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </ul>
           ) : (
             <p className="text-sm text-slate-500">No outstanding balances</p>
           )}
-
+      
           {balances.per_user.length > 3 && (
             <div className="mt-3 text-right">
               <Button variant="outline" size="sm">
@@ -215,8 +244,7 @@ export default async function ExpensesPage({
                     className="p-4 bg-gradient-to-r from-[#00e2b7] to-teal-600 text-white"
                   >
                     <p className="text-sm font-medium">
-                      Settlement: User {item.fromUserId} paid User{" "}
-                      {item.toUserId}{" "}
+                      {(item.fromName ?? `User ${item.fromUserId}`)} paid {(item.toName ?? `User ${item.toUserId}`)}{" "}
                       {formatCurrency(item.amount, item.currency)}
                     </p>
                   </Card>
