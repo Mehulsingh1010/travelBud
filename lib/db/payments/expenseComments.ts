@@ -1,3 +1,4 @@
+// lib/db/payments/expenseComments.ts
 import { pgTable, serial, integer, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { expenses } from "./expenses";
 import { users } from "../schema";

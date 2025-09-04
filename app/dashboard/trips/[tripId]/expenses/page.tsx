@@ -14,6 +14,9 @@ import Link from "next/link"
 import { formatCurrency } from "@/lib/expenses/formatCurrency"
 import { getBalances } from "@/lib/expenses/getBalance"
 import SettleUpCard from "@/components/expenses/SettleUpCard"
+import RecentActivityClient from "@/components/expenses/RecentActivityClient"
+import { inArray, and } from "drizzle-orm"
+import { expenseSplits, expensePayers } from "@/lib/db/payments"
 
 
 // ---------- TYPES ----------
@@ -24,6 +27,7 @@ type RecentExpense = {
   expenseDate: Date
   amountConverted: number
   createdAt: Date | null
+  myShare?: number
 }
 
 type RecentSettlement = {
@@ -91,11 +95,40 @@ export default async function ExpensesPage({
     .where(eq(expenses.tripId, tripId))
     .orderBy(desc(expenses.createdAt))
     .limit(10)
+    
+      // Recent settlements WITH names
+  const recentExpenseIds = recentExpenses.map((e) => e.id)
 
-  // Recent settlements WITH names
+  // fetch split rows for current user for these recent expenses
+  const mySplitRows = recentExpenseIds.length
+    ? await db.query.expenseSplits.findMany({
+        where: and(inArray(expenseSplits.expenseId, recentExpenseIds), eq(expenseSplits.userId, session.userId)),
+      })
+    : []
+
+  // NEW: fetch payer rows for current user for these recent expenses (how much the user actually paid)
+  const myPayerRows = recentExpenseIds.length
+    ? await db.query.expensePayers.findMany({
+        where: and(inArray(expensePayers.expenseId, recentExpenseIds), eq(expensePayers.userId, session.userId)),
+      })
+    : []
+
+  // map expenseId -> my share (amountOwed in smallest unit)
+  const myShareMap = new Map<number, number>()
+  for (const s of mySplitRows) {
+    myShareMap.set(s.expenseId, Number(s.amountOwed))
+  }
+
+  // map expenseId -> my paid amount (amount in smallest unit)
+  const myPaidMap = new Map<number, number>()
+  for (const p of myPayerRows) {
+    myPaidMap.set(p.expenseId, Number(p.amount))
+  }
+
+  // Recent settlements we already fetched (getRecentSettlements or however you had it)
   const recentSettlements = await getRecentSettlements(tripId)
 
-  // ✅ Build recentActivity carrying names through
+  // Build recentActivity carrying myShare and myPaid through
   const recentActivity: (RecentExpense | RecentSettlement)[] = [
     ...recentExpenses.map((e) => ({
       type: "expense" as const,
@@ -104,6 +137,8 @@ export default async function ExpensesPage({
       expenseDate: e.expenseDate,
       amountConverted: e.amountConverted,
       createdAt: e.createdAt,
+      myShare: myShareMap.get(e.id) ?? 0, // in smallest unit
+      myPaid: myPaidMap.get(e.id) ?? 0,   // in smallest unit
     })),
     ...recentSettlements.map((s) => ({
       type: "settlement" as const,
@@ -113,8 +148,8 @@ export default async function ExpensesPage({
       amount: s.amount,
       currency: s.currency,
       createdAt: s.createdAt,
-      fromName: s.fromName,   // ✅ keep names
-      toName: s.toName,       // ✅ keep names
+      fromName: s.fromName,
+      toName: s.toName,
     })),
   ]
     .sort((a, b) => {
@@ -124,6 +159,32 @@ export default async function ExpensesPage({
     })
     .slice(0, 10)
 
+  // Build client-friendly items (strings instead of Date objects) and include myShare/myPaid
+  const clientItems = recentActivity.map((it) => {
+    if (it.type === "expense") {
+      return {
+        kind: "expense" as const,
+        id: it.id,
+        title: it.title,
+        expenseDateISO: (it.expenseDate instanceof Date ? it.expenseDate : new Date(it.expenseDate)).toISOString(),
+        amountConverted: it.amountConverted,
+        myShare: (it as any).myShare ?? 0,
+        myPaid: (it as any).myPaid ?? 0,
+      }
+    } else {
+      const fromLabel = (it as any).fromName ?? `User ${(it as any).fromUserId}`
+      const toLabel = (it as any).toName ?? `User ${(it as any).toUserId}`
+      return {
+        kind: "settlement" as const,
+        id: it.id,
+        fromLabel,
+        toLabel,
+        amount: (it as any).amount,
+        currency: (it as any).currency,
+        createdAtISO: (it as any).createdAt ? (it as any).createdAt.toISOString() : null,
+      }
+    }
+  })
   // Net balance UI
   const netDisplay =
     net === 0
@@ -215,45 +276,16 @@ export default async function ExpensesPage({
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((item) =>
-                item.type === "expense" ? (
-                  <Card
-                    key={`exp-${item.id}`}
-                    className="p-4 flex justify-between items-center hover:shadow-md transition"
-                  >
-                    <div>
-                      <h4 className="font-medium">{item.title}</h4>
-                      <p className="text-xs text-slate-500">
-                        {new Date(item.expenseDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-semibold">
-                        Your share: (pending calc)
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        Total: {formatCurrency(item.amountConverted, currency)}
-                      </p>
-                    </div>
-                  </Card>
-                ) : (
-                  <Card
-                    key={`set-${item.id}`}
-                    className="p-4 bg-gradient-to-r from-[#00e2b7] to-teal-600 text-white"
-                  >
-                    <p className="text-sm font-medium">
-                      {(item.fromName ?? `User ${item.fromUserId}`)} paid {(item.toName ?? `User ${item.toUserId}`)}{" "}
-                      {formatCurrency(item.amount, item.currency)}
-                    </p>
-                  </Card>
-                )
-              )
-            ) : (
-              <p className="text-sm text-slate-500">No recent activity</p>
-            )}
-          </div>
+          {clientItems.length > 0 ? (
+            <RecentActivityClient
+              items={clientItems}
+              currency={currency}
+              tripId={tripId}
+              currentUser={{ id: session.userId, name: session.name || "You" }}
+            />
+          ) : (
+            <p className="text-sm text-slate-500">No recent activity</p>
+          )}
         </CardContent>
       </Card>
         {/* Floating Add Expense Button */}
