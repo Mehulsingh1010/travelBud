@@ -39,6 +39,20 @@ export default function ProfilePage() {
     alert("Profile updated!");
   };
 
+  // NEW: toggles the three verification booleans in local state
+  const handleToggleVerifications = () => {
+    setUser((u) =>
+      u
+        ? {
+            ...u,
+            isNameVerified: true,
+            isPhoneVerified: true,
+            isAddressVerified: true,
+          }
+        : u
+    );
+  };
+
   if (loading)
     return (
       <p className="text-center mt-10 text-gray-500 animate-pulse">
@@ -120,6 +134,16 @@ export default function ProfilePage() {
         <div className="mt-2">
           <VerifiedBadge verified={user.isAddressVerified} />
         </div>
+      </div>
+
+      {/* Toggle verifications button (NEW) */}
+      <div className="flex justify-end">
+	<button
+	  onClick={handleToggleVerifications}
+	  className="w-44 bg-gradient-to-r from-[#00e2b7] to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold px-4 	  py-2 rounded-xl shadow-md transition"
+	>
+	  Verify with DigiLocker
+	</button>
       </div>
 
       {/* Description */}
