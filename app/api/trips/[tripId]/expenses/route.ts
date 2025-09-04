@@ -20,8 +20,8 @@ const createExpenseSchema = z.object({
   payers: z.array(
     z.object({
       userId: z.number().int(),
-      mode: z.enum(["absolute", "percentage", "shares"]).default("absolute"),
-      value: z.number().positive(),
+      mode: z.enum(["absolute", "percentage", "shares","equal"]).default("equal"),
+      value: z.number().positive().optional(),
     })
   ),
   splits: z.array(
@@ -113,21 +113,23 @@ export async function POST(
     }
 
     let payerShares: number[]
-    if (payerMode === "absolute") {
-      const total = data.payers.reduce((s, p) => s + p.value, 0)
+    if (payerMode === "equal") {
+      payerShares = data.payers.map(() => 1)
+    } else if (payerMode === "absolute") {
+      const total = data.payers.reduce((s, p) => s + (p.value ?? 0), 0)
       if (Math.round(total * 100) !== Math.round(data.amount * 100)) {
         throw new Error("Sum of absolute payer amounts must equal expense amount")
       }
-      payerShares = data.payers.map(p => Math.round(p.value * 100))
+      payerShares = data.payers.map(p => Math.round((p.value ?? 0) * 100))
     } else if (payerMode === "percentage") {
-      const total = data.payers.reduce((s, p) => s + p.value, 0)
+      const total = data.payers.reduce((s, p) => s + (p.value ?? 0), 0)
       if (Math.round(total) !== 100) {
         throw new Error("Sum of payer percentages must equal 100")
       }
-      payerShares = data.payers.map(p => (p.value / 100) * amountConverted)
+      payerShares = data.payers.map(p => ((p.value ?? 0) / 100) * amountConverted)
     } else { // shares
-      const totalShares = data.payers.reduce((s, p) => s + p.value, 0)
-      payerShares = data.payers.map(p => (p.value / totalShares) * amountConverted)
+      const totalShares = data.payers.reduce((s, p) => s + (p.value ?? 0), 0)
+      payerShares = data.payers.map(p => ((p.value ?? 0) / totalShares) * amountConverted)
     }
 
     const payerAlloc = distributeRemainder(
