@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "latest",
+    "@clerk/nextjs": "^6.31.9",
     "@cloudflare/workers-types": "latest",
     "@electric-sql/pglite": "latest",
     "@hookform/resolvers": "^3.9.1",
@@ -55,6 +56,7 @@
     "@vercel/postgres": "latest",
     "@xata.io/client": "latest",
     "autoprefixer": "^10.4.20",
+    "axios": "^1.11.0",
     "bcryptjs": "latest",
     "better-sqlite3": "latest",
     "bun-types": "latest",

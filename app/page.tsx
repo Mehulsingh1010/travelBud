@@ -24,12 +24,12 @@ export default function LandingPage() {
             <span className="text-3xl font-bold text-gray-900 tracking-tight">TravelBuddy</span>
           </div>
           <div className="space-x-3">
-            <Link href="/login">
+            <Link href="/sign-in">
               <Button variant="ghost" className="text-gray-600 hover:text-gray-900 hover:bg-teal-50">
                 Sign In
               </Button>
             </Link>
-            <Link href="/signup">
+            <Link href="/sign-up">
               <Button className="bg-[#40E0D0] hover:bg-[#20f0e8] text-white shadow-lg hover:shadow-xl transition-all duration-300">
                 Get Started
               </Button>
@@ -57,7 +57,7 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
-              <Link href="/signup">
+              <Link href="/sign-up">
                 <Button
                   size="lg"
                   className="bg-[#40E0D0] hover:bg-[#20f0e8] text-white shadow-2xl px-10 py-6 text-xl rounded-2xl hover:scale-105 transition-all duration-300"
@@ -66,7 +66,7 @@ export default function LandingPage() {
                   <ArrowRight className="w-6 h-6 ml-3" />
                 </Button>
               </Link>
-              <Link href="/login">
+              <Link href="/sign-in">
                 <Button
                   size="lg"
                   variant="outline"
@@ -205,7 +205,7 @@ export default function LandingPage() {
                 Join thousands of travelers who trust TravelBuddy for their adventures. Start planning your next journey
                 today.
               </p>
-              <Link href="/signup">
+              <Link href="/sign-up">
                 <Button
                   size="lg"
                   className="bg-white text-[#00FFFF] hover:bg-gray-50 shadow-2xl px-12 py-6 text-xl rounded-2xl font-bold hover:scale-105 transition-all duration-300"

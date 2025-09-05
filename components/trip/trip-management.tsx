@@ -262,24 +262,24 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
       name: "Alice",
       latitude: 40.7589,
       longitude: -73.9851,
-      lastUpdate: new Date().toISOString(),
+      lastUpdate: "2025-09-05T17:28:00.000Z",
     },
     {
       id: 2,
       name: "Bob",
       latitude: 40.7505,
       longitude: -73.9934,
-      lastUpdate: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
+      lastUpdate: "2025-09-05T17:23:00.000Z", // 5 minutes ago
     },
     {
       id: 3,
       name: "Charlie",
       latitude: 40.7614,
       longitude: -73.9776,
-      lastUpdate: new Date(Date.now() - 600000).toISOString(), // 10 minutes ago
+      lastUpdate: "2025-09-05T17:18:00.000Z", // 10 minutes ago
     },
-  ]
-  
+  ];
+  const membersToShow = sampleMembers;
   const sampleLocations = [
     { id: 1, name: "Central Park", latitude: 40.7829, longitude: -73.9654, type: "primary" as const },
     // { id: 2, name: "Times Square", latitude: 40.758, longitude: -73.9855, type: "highlight" as const },
@@ -400,7 +400,7 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
             <CardDescription>Real-time location sharing for all trip members</CardDescription>
           </CardHeader>
           <CardContent>
-          <LiveMap tripId={1} tripName="NYC Adventure" members={sampleMembers} locations={sampleLocations} />
+          <LiveMap tripId={1} tripName="NYC Adventure" members={membersToShow} locations={sampleLocations} />
           </CardContent>
         </Card>
       )}

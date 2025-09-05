@@ -3,20 +3,20 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import { ClerkProvider } from "@clerk/nextjs"
+import Provider from "./provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "TravelBuddy - Travel Together, Stay Connected",
   description: "Share live locations, discover amazing places, and coordinate seamlessly with your travel companions.",
-    generator: 'v0.dev'
-}
+  generator: 'v0.dev'   
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+
+// Component: Root layout content
+function RootLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -33,9 +33,20 @@ export default function RootLayout({
         ></script>
       </head>
       <body className={inter.className}>
-        {children}
-        <Toaster />
+        <Provider>
+          {children}
+          <Toaster />
+        </Provider>
       </body>
     </html>
+  )
+}
+
+// Component: Clerk wrapper
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ClerkProvider>
+      <RootLayoutContent>{children}</RootLayoutContent>
+    </ClerkProvider>
   )
 }
