@@ -107,6 +107,15 @@ export async function PUT(req: Request) {
           : formData.get("isAddressVerified") !== null
           ? formData.get("isAddressVerified") === "true"
           : undefined;
+      const sosPhoneNumbers =
+        incomingUser.sosPhoneNumbers ??
+        (formData.get("sosPhoneNumbers") ? JSON.parse(String(formData.get("sosPhoneNumbers"))) : undefined);
+      const sosEmails =
+        incomingUser.sosEmails ??
+        (formData.get("sosEmails") ? JSON.parse(String(formData.get("sosEmails"))) : undefined);
+
+      if (Array.isArray(sosPhoneNumbers)) updateValues.sosPhoneNumbers = JSON.stringify(sosPhoneNumbers.slice(0, 5));
+      if (Array.isArray(sosEmails)) updateValues.sosEmails = JSON.stringify(sosEmails.slice(0, 5));
 
       if (phoneNumber !== undefined) updateValues.phoneNumber = phoneNumber;
       if (countryCode !== undefined) updateValues.countryCode = countryCode;
@@ -160,6 +169,8 @@ export async function PUT(req: Request) {
         isPhoneVerified,
         isAddressVerified,
         removeAvatar,
+        sosPhoneNumbers,
+        sosEmails,
       } = body;
 
       if (phoneNumber !== undefined) updateValues.phoneNumber = phoneNumber;
@@ -169,6 +180,20 @@ export async function PUT(req: Request) {
       if (isNameVerified !== undefined) updateValues.isNameVerified = isNameVerified;
       if (isPhoneVerified !== undefined) updateValues.isPhoneVerified = isPhoneVerified;
       if (isAddressVerified !== undefined) updateValues.isAddressVerified = isAddressVerified;
+      if (sosPhoneNumbers  !== undefined){
+        if(!Array.isArray(sosPhoneNumbers)){
+          return NextResponse.json({ error: "sosPhoneNumbers must be an array" }, { status: 400 });
+        }else{
+          updateValues.sosPhoneNumbers = JSON.stringify(sosPhoneNumbers.slice(0, 5));
+        }
+      }
+      if (sosEmails !== undefined){
+        if(!Array.isArray(sosEmails)){
+          return NextResponse.json({ error: "sosEmails must be an array" }, { status: 400 });
+        }else{
+          updateValues.sosEmails = JSON.stringify(sosEmails.slice(0, 5));
+        }
+      }
 
       if (removeAvatar === true) {
         // remove previous local file if any, and clear column

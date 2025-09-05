@@ -26,6 +26,9 @@ export const users = pgTable("users", {
   countryCode: varchar("country_code", { length: 5 }),
   address: text("address"),
   description: text("description"),
+  // SOS contacts stored as JSON string in text columns (nullable)
+  sosPhoneNumbers: text("sos_phone_numbers"),
+  sosEmails: text("sos_emails"),
 
   // store if each detail is Aadhaar-verified
   isNameVerified: boolean("is_name_verified").default(false),

@@ -4,9 +4,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ProfileFieldCard from "@/components/profile/ProfileFieldCard";
 import FieldEditorModal from "@/components/profile/FieldEditorModal";
+import SosModal from "@/components/profile/SosModal";
 import { countryCodes } from "@/lib/countryCodes";
 import Image from "next/image";
 import { Trash2, Camera } from "lucide-react";
+
+type PhoneObj = { countryCode: string; number: string };
 
 type User = {
   name: string;
@@ -16,6 +19,8 @@ type User = {
   countryCode?: string; // e.g. "+91"
   address?: string;
   description?: string;
+  sosPhoneNumbers?: PhoneObj[]; // up to 5
+  sosEmails?: string[]; // up to 5
   isNameVerified: boolean;
   isPhoneVerified: boolean;
   isAddressVerified: boolean;
@@ -35,24 +40,82 @@ export default function ProfilePage() {
     null | "name" | "email" | "phone" | "countryCode" | "address" | "description" | "avatar"
   >(null);
 
+  // SOS modal open state
+  const [showSosModal, setShowSosModal] = useState(false);
+
   // avatar menu state & refs
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Load user on mount
   useEffect(() => {
     let mounted = true;
     setLoading(true);
     fetch("/api/user")
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to fetch user");
-        return res.json();
+        const data = await res.json();
+        return data;
       })
-      .then((data: User) => {
+      .then((data: any) => {
         if (!mounted) return;
-        // server returns user object directly on GET in your route
-        setUser(data);
-        setOriginalUser(data);
+        // server returned row directly (or { user })
+        const row = data.user ?? data;
+
+        // Parse/normalize SOS fields into desired shapes
+        const parsedPhones: PhoneObj[] = (() => {
+          const v = row.sosPhoneNumbers ?? row.sos_phone_numbers ?? null;
+          if (!v) return [];
+          if (typeof v === "string") {
+            try {
+              const parsed = JSON.parse(v);
+              if (Array.isArray(parsed)) {
+                return parsed.map((it: any) => (typeof it === "string" ? { countryCode: row.countryCode ?? "+91", number: String(it) } : it));
+              }
+              return [];
+            } catch {
+              return [];
+            }
+          }
+          if (Array.isArray(v)) {
+            return v.map((it: any) => (typeof it === "string" ? { countryCode: row.countryCode ?? "+91", number: String(it) } : it));
+          }
+          return [];
+        })();
+
+        const parsedEmails: string[] = (() => {
+          const v = row.sosEmails ?? row.sos_emails ?? null;
+          if (!v) return [];
+          if (typeof v === "string") {
+            try {
+              const parsed = JSON.parse(v);
+              return Array.isArray(parsed) ? parsed.map(String) : [];
+            } catch {
+              return [];
+            }
+          }
+          if (Array.isArray(v)) return v.map(String);
+          return [];
+        })();
+
+        const normalized: User = {
+          name: row.name,
+          email: row.email,
+          avatarUrl: row.avatarUrl ?? row.avatar_url ?? null,
+          phoneNumber: row.phoneNumber ?? row.phone_number ?? undefined,
+          countryCode: row.countryCode ?? row.country_code ?? undefined,
+          address: row.address ?? undefined,
+          description: row.description ?? undefined,
+          sosPhoneNumbers: parsedPhones,
+          sosEmails: parsedEmails,
+          isNameVerified: !!row.isNameVerified,
+          isPhoneVerified: !!row.isPhoneVerified,
+          isAddressVerified: !!row.isAddressVerified,
+        };
+
+        setUser(normalized);
+        setOriginalUser(normalized);
       })
       .catch((err) => {
         console.error(err);
@@ -98,11 +161,23 @@ export default function ProfilePage() {
       "countryCode",
       "address",
       "description",
+      "sosPhoneNumbers",
+      "sosEmails",
       "isNameVerified",
       "isPhoneVerified",
       "isAddressVerified",
     ];
-    return keys.some((k) => (user as any)[k] !== (originalUser as any)[k]) || !!avatarFile;
+    // compare sos arrays by JSON string
+    return (
+      keys.some((k) => {
+        const a = (user as any)[k];
+        const b = (originalUser as any)[k];
+        if (Array.isArray(a) || Array.isArray(b)) {
+          return JSON.stringify(a || []) !== JSON.stringify(b || []);
+        }
+        return a !== b;
+      }) || !!avatarFile
+    );
   }, [user, originalUser, avatarFile]);
 
   // safe initials for avatar fallback
@@ -140,8 +215,59 @@ export default function ProfilePage() {
       });
       if (!res.ok) throw new Error("Delete failed");
       const payload = await res.json();
-      // server returns { user }
-      const updated: User = (payload && (payload.user ?? payload)) as User;
+      const updatedRaw = payload.user ?? payload;
+
+      // normalize returned row
+      const parsedPhones: PhoneObj[] = (() => {
+        const v = updatedRaw.sosPhoneNumbers ?? updatedRaw.sos_phone_numbers ?? null;
+        if (!v) return [];
+        if (typeof v === "string") {
+          try {
+            const parsed = JSON.parse(v);
+            if (Array.isArray(parsed)) {
+              return parsed.map((it: any) => (typeof it === "string" ? { countryCode: updatedRaw.countryCode ?? "+91", number: String(it) } : it));
+            }
+            return [];
+          } catch {
+            return [];
+          }
+        }
+        if (Array.isArray(v)) {
+          return v.map((it: any) => (typeof it === "string" ? { countryCode: updatedRaw.countryCode ?? "+91", number: String(it) } : it));
+        }
+        return [];
+      })();
+
+      const parsedEmails: string[] = (() => {
+        const v = updatedRaw.sosEmails ?? updatedRaw.sos_emails ?? null;
+        if (!v) return [];
+        if (typeof v === "string") {
+          try {
+            const parsed = JSON.parse(v);
+            return Array.isArray(parsed) ? parsed.map(String) : [];
+          } catch {
+            return [];
+          }
+        }
+        if (Array.isArray(v)) return v.map(String);
+        return [];
+      })();
+
+      const updated: User = {
+        name: updatedRaw.name,
+        email: updatedRaw.email,
+        avatarUrl: updatedRaw.avatarUrl ?? updatedRaw.avatar_url ?? null,
+        phoneNumber: updatedRaw.phoneNumber ?? updatedRaw.phone_number ?? undefined,
+        countryCode: updatedRaw.countryCode ?? updatedRaw.country_code ?? undefined,
+        address: updatedRaw.address ?? undefined,
+        description: updatedRaw.description ?? undefined,
+        sosPhoneNumbers: parsedPhones,
+        sosEmails: parsedEmails,
+        isNameVerified: !!updatedRaw.isNameVerified,
+        isPhoneVerified: !!updatedRaw.isPhoneVerified,
+        isAddressVerified: !!updatedRaw.isAddressVerified,
+      };
+
       setUser(updated);
       setOriginalUser(updated);
       // clear any local preview/file
@@ -181,10 +307,18 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
+      // prepare user object to send - convert sos arrays to fields expected by server
+      const outgoing: any = {
+        ...user,
+        // server expects arrays; route will stringify for DB
+        sosPhoneNumbers: user.sosPhoneNumbers ?? [],
+        sosEmails: user.sosEmails ?? [],
+      };
+
       let payload: any;
       if (avatarFile) {
         const fd = new FormData();
-        fd.append("user", new Blob([JSON.stringify(user)], { type: "application/json" }));
+        fd.append("user", new Blob([JSON.stringify(outgoing)], { type: "application/json" }));
         fd.append("avatar", avatarFile);
         const res = await fetch("/api/user", { method: "PUT", body: fd });
         if (!res.ok) throw new Error("Save failed");
@@ -193,14 +327,64 @@ export default function ProfilePage() {
         const res = await fetch("/api/user", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(user),
+          body: JSON.stringify(outgoing),
         });
         if (!res.ok) throw new Error("Save failed");
         payload = await res.json();
       }
 
-      // server returns { user: updatedUser } — support both shapes just in case
-      const updated: User = (payload && (payload.user ?? payload)) as User;
+      const updatedRaw = payload.user ?? payload;
+
+      // normalize returned row into User
+      const parsedPhones: PhoneObj[] = (() => {
+        const v = updatedRaw.sosPhoneNumbers ?? updatedRaw.sos_phone_numbers ?? null;
+        if (!v) return [];
+        if (typeof v === "string") {
+          try {
+            const parsed = JSON.parse(v);
+            if (Array.isArray(parsed)) {
+              return parsed.map((it: any) => (typeof it === "string" ? { countryCode: updatedRaw.countryCode ?? "+91", number: String(it) } : it));
+            }
+            return [];
+          } catch {
+            return [];
+          }
+        }
+        if (Array.isArray(v)) {
+          return v.map((it: any) => (typeof it === "string" ? { countryCode: updatedRaw.countryCode ?? "+91", number: String(it) } : it));
+        }
+        return [];
+      })();
+
+      const parsedEmails: string[] = (() => {
+        const v = updatedRaw.sosEmails ?? updatedRaw.sos_emails ?? null;
+        if (!v) return [];
+        if (typeof v === "string") {
+          try {
+            const parsed = JSON.parse(v);
+            return Array.isArray(parsed) ? parsed.map(String) : [];
+          } catch {
+            return [];
+          }
+        }
+        if (Array.isArray(v)) return v.map(String);
+        return [];
+      })();
+
+      const updated: User = {
+        name: updatedRaw.name,
+        email: updatedRaw.email,
+        avatarUrl: updatedRaw.avatarUrl ?? updatedRaw.avatar_url ?? null,
+        phoneNumber: updatedRaw.phoneNumber ?? updatedRaw.phone_number ?? undefined,
+        countryCode: updatedRaw.countryCode ?? updatedRaw.country_code ?? undefined,
+        address: updatedRaw.address ?? undefined,
+        description: updatedRaw.description ?? undefined,
+        sosPhoneNumbers: parsedPhones,
+        sosEmails: parsedEmails,
+        isNameVerified: !!updatedRaw.isNameVerified,
+        isPhoneVerified: !!updatedRaw.isPhoneVerified,
+        isAddressVerified: !!updatedRaw.isAddressVerified,
+      };
 
       setUser(updated);
       setOriginalUser(updated);
@@ -228,18 +412,19 @@ export default function ProfilePage() {
   const verifyPhone = () => setUser((u) => (u ? { ...u, isPhoneVerified: true } : u));
   const verifyAddress = () => setUser((u) => (u ? { ...u, isAddressVerified: true } : u));
 
-  if (loading)
-    return <p className="text-center mt-10 animate-pulse text-gray-500">Loading profile...</p>;
+  // Determine SOS button appearance
+  const sosCount = (user?.sosPhoneNumbers?.filter((p) => p?.number).length ?? 0) + (user?.sosEmails?.filter(Boolean).length ?? 0);
+  const sosHasAny = sosCount > 0;
+  const sosBtnClass = sosHasAny ? "bg-amber-400 text-slate-900" : "bg-red-600 text-white";
+  const sosBtnText = sosHasAny ? "Edit SOS details" : "Add SOS details";
 
+  if (loading) return <p className="text-center mt-10 animate-pulse text-gray-500">Loading profile...</p>;
   if (!user) return <p className="text-center mt-10">No user found</p>;
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       {message && (
-        <div
-          role={message.type === "error" ? "alert" : "status"}
-          className={`rounded-md px-4 py-2 ${message.type === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}
-        >
+        <div role={message.type === "error" ? "alert" : "status"} className={`rounded-md px-4 py-2 ${message.type === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
           {message.text}
         </div>
       )}
@@ -320,7 +505,6 @@ export default function ProfilePage() {
       {/* Field cards */}
       <div className="space-y-4">
         <ProfileFieldCard label="Full name" value={user.name || "—"} verified={user.isNameVerified} onEdit={() => setEditingField("name")} onVerify={verifyName} showVerifyButton />
-
         <ProfileFieldCard label="Email" value={user.email || "—"} onEdit={() => setEditingField("email")} />
 
         {/* Combined Phone + Country code card */}
@@ -334,19 +518,26 @@ export default function ProfilePage() {
         />
 
         <ProfileFieldCard label="Address" value={user.address || "—"} verified={user.isAddressVerified} onEdit={() => setEditingField("address")} onVerify={verifyAddress} showVerifyButton />
-
         <ProfileFieldCard label="About" value={user.description || "—"} onEdit={() => setEditingField("description")} />
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={handleSave}
-          disabled={!hasChanges || saving}
-          className={`px-6 py-3 rounded-xl font-semibold shadow-md transition ${hasChanges ? "bg-gradient-to-r from-[#00e2b7] to-teal-600 text-white" : "bg-slate-200 text-slate-600 cursor-not-allowed"}`}
-        >
-          {saving ? "Saving…" : "Save Changes"}
-        </button>
+      {/* Actions row: Save left, SOS right */}
+      <div className="flex items-center gap-4 justify-between">
+        <div>
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges || saving}
+            className={`px-6 py-3 rounded-xl font-semibold shadow-md transition ${hasChanges ? "bg-gradient-to-r from-[#00e2b7] to-teal-600 text-white" : "bg-slate-200 text-slate-600 cursor-not-allowed"}`}
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
+
+        <div>
+          <button onClick={() => setShowSosModal(true)} className={`px-4 py-2 rounded-xl font-semibold shadow-md transition ${sosBtnClass}`}>
+            {sosBtnText}
+          </button>
+        </div>
       </div>
 
       {/* Editor modals */}
@@ -361,13 +552,13 @@ export default function ProfilePage() {
             if (field === "phone") {
               const digits = newVal.replace(/\D/g, "");
               // field-level validation is handled inside modal — modal will only call onSave when valid
-              setUser({ ...user, phoneNumber: digits });
+              setUser((prev) => (prev ? { ...prev, phoneNumber: digits } : prev));
             } else if (field === "countryCode") {
-              setUser({ ...user, countryCode: newVal });
+              setUser((prev) => (prev ? { ...prev, countryCode: newVal } : prev));
             } else if (field === "avatar") {
-              setUser({ ...user, avatarUrl: newVal || undefined });
+              setUser((prev) => (prev ? { ...prev, avatarUrl: newVal || undefined } : prev));
             } else {
-              setUser({ ...user, [field]: newVal } as unknown as User);
+              setUser((prev) => (prev ? ({ ...prev, [field]: newVal } as User) : prev));
             }
             // clear any top-level message that might have been set previously
             setMessage(null);
@@ -377,6 +568,22 @@ export default function ProfilePage() {
           onPickAvatar={(file) => {
             onAvatarPicked(file);
             setEditingField(null);
+          }}
+        />
+      )}
+
+      {/* SOS modal */}
+      {showSosModal && user && (
+        <SosModal
+          initialPhones={user.sosPhoneNumbers && user.sosPhoneNumbers.length ? user.sosPhoneNumbers : [{ countryCode: user.countryCode ?? "+91", number: "" }]}
+          initialEmails={user.sosEmails && user.sosEmails.length ? user.sosEmails : [""]}
+          countryCodes={countryCodes}
+          onClose={() => setShowSosModal(false)}
+          onSave={(phones, emails) => {
+            // phones: PhoneObj[]; emails: string[]
+            // normalize and set on user
+            setUser((prev) => (prev ? { ...prev, sosPhoneNumbers: phones.map((p) => ({ countryCode: p.countryCode, number: p.number })), sosEmails: emails.map((e) => e.trim()) } : prev));
+            setShowSosModal(false);
           }}
         />
       )}

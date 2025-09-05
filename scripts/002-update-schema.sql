@@ -16,6 +16,10 @@ ALTER TABLE users
 ALTER TABLE trip_members ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'member';
 ALTER TABLE trip_members ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'approved';
 
+ALTER TABLE users
+  ADD COLUMN sos_phone_numbers TEXT,
+  ADD COLUMN sos_emails TEXT;
+
 -- Create join requests table
 CREATE TABLE IF NOT EXISTS trip_join_requests (
     id SERIAL PRIMARY KEY,
