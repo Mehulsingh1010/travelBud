@@ -256,7 +256,38 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
       })
     }
   }
-
+  const sampleMembers = [
+    {
+      id: 1,
+      name: "Alice",
+      latitude: 40.7589,
+      longitude: -73.9851,
+      lastUpdate: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      name: "Bob",
+      latitude: 40.7505,
+      longitude: -73.9934,
+      lastUpdate: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
+    },
+    {
+      id: 3,
+      name: "Charlie",
+      latitude: 40.7614,
+      longitude: -73.9776,
+      lastUpdate: new Date(Date.now() - 600000).toISOString(), // 10 minutes ago
+    },
+  ]
+  
+  const sampleLocations = [
+    { id: 1, name: "Central Park", latitude: 40.7829, longitude: -73.9654, type: "primary" as const },
+    // { id: 2, name: "Times Square", latitude: 40.758, longitude: -73.9855, type: "highlight" as const },
+    // { id: 3, name: "Brooklyn Bridge", latitude: 40.7061, longitude: -73.9969, type: "secondary" as const },
+    // { id: 4, name: "Statue of Liberty", latitude: 40.6892, longitude: -74.0445, type: "primary" as const },
+    // { id: 5, name: "Empire State Building", latitude: 40.7484, longitude: -73.9857, type: "highlight" as const },
+  ]
+  
   return (
     <div className="p-6 space-y-6">
       {/* Trip Header */}
@@ -369,7 +400,7 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
             <CardDescription>Real-time location sharing for all trip members</CardDescription>
           </CardHeader>
           <CardContent>
-            <LiveMap tripId={trip.id} tripName={trip.name} members={members.filter((m) => m.status === "approved")} />
+          <LiveMap tripId={1} tripName="NYC Adventure" members={sampleMembers} locations={sampleLocations} />
           </CardContent>
         </Card>
       )}
