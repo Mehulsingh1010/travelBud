@@ -1,12 +1,12 @@
 // app/profile/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import ProfileFieldCard from "@/components/profile/ProfileFieldCard";
 import FieldEditorModal from "@/components/profile/FieldEditorModal";
 import { countryCodes } from "@/lib/countryCodes";
 import Image from "next/image";
-import { Trash2 } from "lucide-react";
+import { Trash2, Camera } from "lucide-react";
 
 type User = {
   name: string;
@@ -35,6 +35,11 @@ export default function ProfilePage() {
     null | "name" | "email" | "phone" | "countryCode" | "address" | "description" | "avatar"
   >(null);
 
+  // avatar menu state & refs
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     let mounted = true;
     setLoading(true);
@@ -61,6 +66,26 @@ export default function ProfilePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // initial load
+
+  // close avatar menu on outside click or Escape
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!showAvatarMenu) return;
+      if (!avatarMenuRef.current) return;
+      if (e.target instanceof Node && !avatarMenuRef.current.contains(e.target)) {
+        setShowAvatarMenu(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowAvatarMenu(false);
+    }
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [showAvatarMenu]);
 
   // compute if anything changed (shallow compare)
   const hasChanges = useMemo(() => {
@@ -221,30 +246,26 @@ export default function ProfilePage() {
 
       {/* Header */}
       <div className="rounded-2xl bg-gradient-to-br from-[#00e2b7] to-teal-600 p-6 text-white shadow-lg flex items-center gap-4">
-        <div className="relative">
-          <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white bg-white/10">
-            <label htmlFor="avatar-input" className="absolute inset-0 cursor-pointer">
-              {user.avatarUrl ? (
-                <Image src={user.avatarUrl} alt="avatar" fill sizes="80px" className="object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-xl font-semibold">{initials || "?"}</div>
-              )}
-            </label>
-            {/* Delete overlay - shows when there is either a saved avatar OR a preview */}
-            {(user.avatarUrl || avatarPreviewUrl) && (
-              <button
-                onClick={handleDeleteAvatar}
-                title="Remove picture"
-                disabled={saving}
-                className="absolute -right-1 -bottom-1 bg-white p-1 rounded-full shadow hover:bg-slate-50"
-                aria-label="Remove picture"
-              >
-                <Trash2 size={16} className="text-red-600" />
-              </button>
+        <div className="relative inline-block">
+          <button
+            onClick={() => setShowAvatarMenu((s) => !s)}
+            aria-haspopup="menu"
+            aria-expanded={showAvatarMenu}
+            title="Profile picture options"
+            className="w-20 h-20 rounded-full overflow-hidden border-4 border-teal-600 bg-white/10 relative"
+          >
+            {user.avatarUrl ? (
+              <Image src={user.avatarUrl} alt="avatar" fill sizes="80px" className="object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-xl font-semibold">
+                {initials || "?"}
+              </div>
             )}
-          </div>
+          </button>
 
+          {/* hidden file input (used by Change option) */}
           <input
+            ref={avatarInputRef}
             id="avatar-input"
             className="sr-only"
             type="file"
@@ -254,6 +275,38 @@ export default function ProfilePage() {
               if (f) onAvatarPicked(f);
             }}
           />
+
+          {/* Avatar menu - NOT clipped: sibling positioned below avatar */}
+          {showAvatarMenu && (
+            <div
+              ref={avatarMenuRef}
+              role="menu"
+              aria-label="Avatar menu"
+              className="absolute left-0 mt-2 w-44 bg-white rounded-lg shadow-lg text-slate-800 overflow-hidden z-50"
+              style={{ top: "5.2rem", transform: "translateX(0)" }}
+            >
+              <button
+                className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-slate-50"
+                onClick={() => {
+                  setShowAvatarMenu(false);
+                  avatarInputRef.current?.click();
+                }}
+              >
+                <Camera size={16} />
+                Change profile picture
+              </button>
+              <button
+                className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-slate-50 text-red-600"
+                onClick={() => {
+                  setShowAvatarMenu(false);
+                  handleDeleteAvatar();
+                }}
+              >
+                <Trash2 size={16} />
+                Delete profile picture
+              </button>
+            </div>
+          )}
         </div>
 
         <div>
