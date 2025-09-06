@@ -42,15 +42,20 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { LiveMap } from "@/components/map/live-map"
 
+import { BalanceResponse } from "@/lib/expenses/getBalance";
+import ExpenseSummaryCard from "@/components/expenses/ExpenseSummaryCard";
+
 interface TripManagementProps {
   trip: any
   members: any[]
   joinRequests: any[]
   currentUser: any
   userRole: string
+  tripId: number;
+  balances: BalanceResponse;
 }
 
-export function TripManagement({ trip, members, joinRequests, currentUser, userRole }: TripManagementProps) {
+export function TripManagement({ trip, members, joinRequests, currentUser, userRole, tripId, balances }: TripManagementProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
@@ -373,6 +378,8 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
           </CardContent>
         </Card>
       )}
+      {/* Expense Summary */}
+      <ExpenseSummaryCard tripId={tripId} balances={balances} />
 
       {/* Trip Management Tabs */}
       <Tabs defaultValue="members" className="space-y-6">

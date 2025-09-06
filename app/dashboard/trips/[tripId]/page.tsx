@@ -4,10 +4,12 @@ import { trips, tripMembers, users, tripJoinRequests } from "@/lib/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { notFound, redirect } from "next/navigation"
 import { TripManagement } from "@/components/trip/trip-management"
+import { getBalances } from "@/lib/expenses/getBalance";
 
 interface TripPageProps {
   params: {
     tripId: string
+    currentUserId: number;
   }
 }
 
@@ -19,6 +21,9 @@ export default async function TripPage({ params }: TripPageProps) {
   }
 
   const tripId = Number.parseInt(params.tripId)
+
+  // Get balances
+  const balances = await getBalances(tripId, session.userId)
 
   // Get trip details
   const trip = await db.select().from(trips).where(eq(trips.id, tripId)).limit(1)
@@ -80,6 +85,8 @@ export default async function TripPage({ params }: TripPageProps) {
       joinRequests={joinRequests}
       currentUser={session}
       userRole={membership[0].role!}
-    />
+      tripId={tripId}
+      balances={balances}
+      />
   )
 }
