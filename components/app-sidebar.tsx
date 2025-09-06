@@ -54,7 +54,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [showSOSDialog, setShowSOSDialog] = useState(false)
   const [notificationCount] = useState(3)
-  const [cooldown, setCooldown] = useState(0) // 🚨 SOS cooldown timer
+  const [cooldown, setCooldown] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
@@ -89,13 +89,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const handleSOS = () => {
     setShowSOSDialog(false)
     console.log("🚨 SOS Triggered! Send alerts here...")
-    // TODO: integrate with backend (emails, SMS, calls, push notifications, etc.)
-      toast({
-    title: "🚨 SOS Activated",
-    description: "Emergency alerts are being sent!",
-    variant: "sos", // 🔴 makes it red
-  })
-    setCooldown(5) // start 5s cooldown
+    toast({
+      title: "🚨 SOS Activated",
+      description: "Emergency alerts are being sent!",
+      variant: "sos",
+    })
+    setCooldown(5)
   }
 
   const getUserName = () => {
@@ -134,22 +133,23 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </div>
         </Link>
 
-        {/* User Profile Card */}
-        <div className="rounded-xl bg-gradient-to-br from-[#00e2b7] to-teal-600 p-4 text-white shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white font-medium shadow-inner">
-              {user.name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{getUserName()}</p>
-              <p className="text-xs text-teal-100/90 truncate">{user.role}</p>
+        {/* User Profile Card (clickable) */}
+        <Link href="/profile">
+          <div className="rounded-xl bg-gradient-to-br from-[#00e2b7] to-teal-600 p-4 text-white shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white font-medium shadow-inner">
+                {user.name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{getUserName()}</p>
+                <p className="text-xs text-teal-100/90 truncate">{user.role}</p>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-4 flex-1 overflow-y-auto">
-        {/* Quick Action Button */}
         <div className="mb-4 px-2">
           <Button
             onClick={handleQuickCreateTrip}
@@ -203,7 +203,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarFooter className="p-4 pt-2 flex-shrink-0">
         <SidebarSeparator className="my-4 bg-gray-200" />
 
-        {/* 🚨 SOS Button with Confirmation + Cooldown */}
+        {/* 🚨 SOS Button */}
         <div className="mb-4">
           <AlertDialog open={showSOSDialog} onOpenChange={setShowSOSDialog}>
             <AlertDialogTrigger asChild>
@@ -236,7 +236,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </AlertDialog>
         </div>
 
-        {/* Action Buttons Row */}
+        {/* Action Buttons */}
         <div className="flex items-center justify-between mb-4">
           <Button
             variant="ghost"
@@ -290,7 +290,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </AlertDialog>
         </div>
 
-        {/* Copyright */}
         <div className="text-center">
           <p className="text-xs text-gray-400 mb-1">© {new Date().getFullYear()} TravelBuddy System</p>
         </div>
