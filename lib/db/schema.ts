@@ -21,6 +21,19 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).default("user"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+
+  phoneNumber: varchar("phone_number", { length: 15 }),
+  countryCode: varchar("country_code", { length: 5 }),
+  address: text("address"),
+  description: text("description"),
+  // SOS contacts stored as JSON string in text columns (nullable)
+  sosPhoneNumbers: text("sos_phone_numbers"),
+  sosEmails: text("sos_emails"),
+
+  // store if each detail is Aadhaar-verified
+  isNameVerified: boolean("is_name_verified").default(false),
+  isPhoneVerified: boolean("is_phone_verified").default(false),
+  isAddressVerified: boolean("is_address_verified").default(false),
 })
 
 export const trips = pgTable("trips", {
@@ -34,6 +47,7 @@ export const trips = pgTable("trips", {
   endDate: timestamp("end_date"),
   maxMembers: integer("max_members").default(10),
   isActive: boolean("is_active").default(true),
+  baseCurrency: varchar("base_currency", { length: 10 }).default("INR"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 })
@@ -107,7 +121,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   createdTrips: many(trips),
   tripMemberships: many(tripMembers),
   locations: many(userLocations),
-  joinRequests: many(tripJoinRequests),
+
+  // who requested to join
+  joinRequests: many(tripJoinRequests, { relationName: "join_request_user" }),
+  // who responded (approved/rejected requests)
+  respondedJoinRequests: many(tripJoinRequests, { relationName: "join_request_responder" }),
   feedback: many(tripFeedback),
 }))
 
@@ -138,13 +156,17 @@ export const tripJoinRequestsRelations = relations(tripJoinRequests, ({ one }) =
     fields: [tripJoinRequests.tripId],
     references: [trips.id],
   }),
+  // who made the join request
   user: one(users, {
     fields: [tripJoinRequests.userId],
     references: [users.id],
+    relationName: "join_request_user",
   }),
+  // which user responded (approved/rejected)
   respondedByUser: one(users, {
     fields: [tripJoinRequests.respondedBy],
     references: [users.id],
+    relationName: "join_request_responder",
   }),
 }))
 
