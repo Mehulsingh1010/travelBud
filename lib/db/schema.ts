@@ -116,6 +116,22 @@ export const userLocations = pgTable(
   }),
 )
 
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }).notNull(), // trip_enrollment, trip_start, trip_update, trip_complete, join_request
+    title: varchar("title", { length: 255 }).notNull(),
+    message: text("message").notNull(),
+    tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
+    tripName: varchar("trip_name", { length: 255 }),
+    relatedUserId: integer("related_user_id").references(() => users.id, { onDelete: "cascade" }),
+    isRead: boolean("is_read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+)
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   createdTrips: many(trips),
@@ -127,6 +143,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   // who responded (approved/rejected requests)
   respondedJoinRequests: many(tripJoinRequests, { relationName: "join_request_responder" }),
   feedback: many(tripFeedback),
+  notifications: many(notifications),
 }))
 
 export const tripsRelations = relations(trips, ({ one, many }) => ({
@@ -138,6 +155,7 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
   locations: many(userLocations),
   joinRequests: many(tripJoinRequests),
   feedback: many(tripFeedback),
+  notifications: many(notifications),
 }))
 
 export const tripMembersRelations = relations(tripMembers, ({ one }) => ({
@@ -189,5 +207,20 @@ export const userLocationsRelations = relations(userLocations, ({ one }) => ({
   trip: one(trips, {
     fields: [userLocations.tripId],
     references: [trips.id],
+  }),
+}))
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  trip: one(trips, {
+    fields: [notifications.tripId],
+    references: [trips.id],
+  }),
+  relatedUser: one(users, {
+    fields: [notifications.relatedUserId],
+    references: [users.id],
   }),
 }))

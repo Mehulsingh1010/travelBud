@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { trips, tripMembers } from "@/lib/db/schema"
+import { trips, tripMembers, notifications } from "@/lib/db/schema"
 import { verifySession } from "@/lib/auth/session"
 import { nanoid } from "nanoid"
 
@@ -49,6 +49,22 @@ export async function POST(request: NextRequest) {
       role: "creator",
       status: "approved",
     })
+
+    // Create notification for trip creation
+    try {
+      await db.insert(notifications).values({
+        userId: session.userId,
+        type: 'trip_enrollment',
+        title: 'Trip Created',
+        message: `You've successfully created "${newTrip[0].name}"`,
+        tripId: newTrip[0].id,
+        tripName: newTrip[0].name,
+        isRead: false,
+      })
+    } catch (notificationError) {
+      console.error("Failed to create trip creation notification:", notificationError)
+      // Don't fail the trip creation if notification fails
+    }
 
     return NextResponse.json({
       message: "Trip created successfully",

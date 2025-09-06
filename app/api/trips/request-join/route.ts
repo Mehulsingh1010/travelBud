@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { trips, tripMembers, tripJoinRequests } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { verifySession } from "@/lib/auth/session"
+import { createJoinRequestNotification } from "@/lib/notifications"
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +64,20 @@ export async function POST(request: NextRequest) {
       message: message?.trim() || null,
       status: "pending",
     })
+
+    // Create notification for trip creator
+    try {
+      await createJoinRequestNotification(
+        trip[0].creatorId!,
+        session.userId,
+        session.name,
+        tripId,
+        trip[0].name
+      )
+    } catch (notificationError) {
+      console.error("Failed to create notification:", notificationError)
+      // Don't fail the request if notification creation fails
+    }
 
     return NextResponse.json({
       message: "Join request sent successfully",
