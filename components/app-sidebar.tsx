@@ -46,7 +46,7 @@ const menuItems = [
   { title: "Create Trip", url: "/dashboard/create-trip", icon: Plus, id: "create-trip" },
   { title: "Join Trip", url: "/dashboard/join-trip", icon: Users, id: "join-trip" },
   { title: "History", url: "/dashboard/history", icon: Calendar, id: "history" },
-  { title: "Notifications", url: "/dashboard/notifications", icon: Bell, id: "notifications" },
+  // { title: "Notifications", url: "/dashboard/notifications", icon: Bell, id: "notifications" },
 ]
 
 export function AppSidebar({ user }: AppSidebarProps) {
@@ -238,18 +238,26 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 relative text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
-          >
-            <Bell className="h-4 w-4" />
-            {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#00e2b7] text-white text-xs flex items-center justify-center">
-                {notificationCount}
-              </span>
-            )}
-          </Button>
+        <Link href="/dashboard/notifications" className="relative">
+  <Button
+    variant="ghost"
+    size="icon"
+    className={cn(
+      "h-9 w-9 relative rounded-lg",
+      pathname === "/dashboard/notifications"
+        ? "bg-[#36d6ba] text-white" 
+        : "text-gray-500 hover:text-teal-600 hover:bg-teal-50"
+    )}
+  >
+    <Bell className="h-4 w-4" />
+    {notificationCount > 0 && (
+      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#00e2b7] text-white text-xs flex items-center justify-center">
+        {notificationCount}
+      </span>
+    )}
+  </Button>
+</Link>
+
 
           <Button
             variant="ghost"
