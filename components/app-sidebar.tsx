@@ -259,13 +259,20 @@ export function AppSidebar({ user }: AppSidebarProps) {
 </Link>
 
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          <Link href="/profile">
+  <Button
+    variant="ghost"
+    size="icon"
+    className={cn(
+      "h-9 w-9 rounded-lg",
+      pathname === "/profile"
+        ? "bg-[#36d6ba] text-white" // highlighted when active
+        : "text-gray-500 hover:text-teal-600 hover:bg-teal-50"
+    )}
+  >
+    <Settings className="h-4 w-4" />
+  </Button>
+</Link>
 
           <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
             <AlertDialogTrigger asChild>
