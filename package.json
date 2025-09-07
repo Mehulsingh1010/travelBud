@@ -69,7 +69,7 @@
     "expo-sqlite": "latest",
     "gel": "latest",
     "input-otp": "1.4.1",
-    "jose": "latest",
+    "jose": "^6.1.0",
     "knex": "latest",
     "kysely": "latest",
     "leaflet": "latest",

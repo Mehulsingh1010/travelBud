@@ -4,23 +4,15 @@ import { HeroBanner } from "@/components/trip/hero-banner"
 import TripCard from "@/components/trip/trip-card"
 import { useEffect, useState } from "react"
 import useSWR from "swr"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Filter, X, Calendar, Users, MapPin, Menu, Send, AlertCircle, Plane } from "lucide-react"
+import { Calendar, Users, MapPin, Send, AlertCircle, Plane, LogOut } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-
-const TRIP_IMAGES = [
-  // "/trip/card-img-1.png",
-  // "/trip/card-img-2.png", 
-  // "/trip/card-img-3.png",
-  // "/trip/card-img-4.png",
-  "/trip/card-img-5.png"
-]
+import { useRouter } from "next/navigation"
 
 type Trip = {
   id: number
@@ -29,6 +21,8 @@ type Trip = {
   status?: string | null
   startDate?: string | Date | null
   endDate?: string | Date | null
+  maxMembers?: number | null
+  creatorId?: number | null
 }
 
 type TripsResponse = {
@@ -36,14 +30,13 @@ type TripsResponse = {
   created: Trip[]
   joined: Trip[]
   history: Trip[]
-  demo?: boolean
 }
 
 type LocalFilters = {
   location?: string
   days?: number
   people?: number
-  status?: "open" | "closed" | ""
+  status?: "planned" | "active" | "completed" | "cancelled" | ""
   feeMin?: number
   feeMax?: number
   dateFrom?: string
@@ -51,29 +44,31 @@ type LocalFilters = {
   eighteenPlus?: boolean
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
-
-// Get current user ID - replace this with your actual auth logic
-const getCurrentUserId = () => {
-  return 1
+type UserSession = {
+  userId: number
+  email: string
+  name: string
+  role: string
 }
 
-// Function to get random image path
-const getRandomTripImage = (seed: number) => {
-  return TRIP_IMAGES[seed % TRIP_IMAGES.length]
-}
+const fetcher = (url: string) => fetch(url, {
+  credentials: 'include',
+}).then((r) => {
+  if (!r.ok) {
+    throw new Error('Failed to fetch')
+  }
+  return r.json()
+})
 
 export default function Page() {
-  const userId = getCurrentUserId()
-  const { data, isLoading, error } = useSWR<TripsResponse>(`/api/trips/my-trips?userId=${userId}`, fetcher)
+  const router = useRouter()
+  const { data, isLoading, error, mutate } = useSWR<TripsResponse>('/api/trips/my-trips', fetcher)
   const { toast } = useToast()
   
+  const [user, setUser] = useState<UserSession | null>(null)
   const [keyword, setKeyword] = useState("")
   const [appliedFilters, setAppliedFilters] = useState<LocalFilters>({})
-  const [tempFilters, setTempFilters] = useState<LocalFilters>({})
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   
   // Join Trip Modal States
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
@@ -82,6 +77,32 @@ export default function Page() {
   const [isJoinLoading, setIsJoinLoading] = useState(false)
   const [foundTrip, setFoundTrip] = useState<any>(null)
   const [joinStep, setJoinStep] = useState<"code" | "details" | "success">("code")
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include'
+        })
+        
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData.user)
+        } else {
+          router.push('/login')
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+        router.push('/login')
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+
+
 
   function filter(list: Trip[]) {
     let filtered = list
@@ -96,9 +117,36 @@ export default function Page() {
       )
     }
 
-    // Apply other filters
+    // Apply status filter
     if (appliedFilters.status && appliedFilters.status !== "") {
       filtered = filtered.filter((t) => t.status === appliedFilters.status)
+    }
+
+    // Apply date filters
+    if (appliedFilters.dateFrom) {
+      filtered = filtered.filter((t) => {
+        if (!t.startDate) return false
+        const tripStart = new Date(t.startDate)
+        const filterStart = new Date(appliedFilters.dateFrom!)
+        return tripStart >= filterStart
+      })
+    }
+
+    if (appliedFilters.dateTo) {
+      filtered = filtered.filter((t) => {
+        if (!t.endDate) return false
+        const tripEnd = new Date(t.endDate)
+        const filterEnd = new Date(appliedFilters.dateTo!)
+        return tripEnd <= filterEnd
+      })
+    }
+
+    // Apply max members filter
+    if (appliedFilters.people) {
+      filtered = filtered.filter((t) => {
+        if (!t.maxMembers) return false
+        return t.maxMembers >= appliedFilters.people!
+      })
     }
 
     return filtered
@@ -119,17 +167,6 @@ export default function Page() {
   const history = filter(historyRaw)
   const allTrips = filter(allUnique)
 
-  const handleApplyFilters = () => {
-    setAppliedFilters(tempFilters)
-    setIsFilterOpen(false)
-  }
-
-  const handleClearFilters = () => {
-    setTempFilters({})
-    setAppliedFilters({})
-    setKeyword("")
-  }
-
   // Join Trip Modal Functions
   const handleFindTrip = async () => {
     if (!inviteCode.trim()) {
@@ -143,7 +180,9 @@ export default function Page() {
 
     setIsJoinLoading(true)
     try {
-      const response = await fetch(`/api/trips/find?inviteCode=${inviteCode.toUpperCase()}`)
+      const response = await fetch(`/api/trips/find?inviteCode=${inviteCode.toUpperCase()}`, {
+        credentials: 'include'
+      })
       const data = await response.json()
 
       if (response.ok && data.trip) {
@@ -173,6 +212,7 @@ export default function Page() {
       const response = await fetch("/api/trips/request-join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({
           tripId: foundTrip.id,
           message: joinMessage.trim(),
@@ -187,10 +227,7 @@ export default function Page() {
           title: "Request Sent!",
           description: "The trip organizer will review your request",
         })
-        // Refresh the trips data
-        setTimeout(() => {
-          window.location.reload()
-        }, 2000)
+        mutate()
       } else {
         toast({
           title: "Request Failed",
@@ -225,12 +262,12 @@ export default function Page() {
         return "bg-emerald-50 text-emerald-700 border-emerald-200"
       case "completed":
         return "bg-gray-100 text-gray-700 border-gray-200"
+      case "cancelled":
+        return "bg-red-50 text-red-700 border-red-200"
       default:
         return "bg-gray-100 text-gray-700 border-gray-200"
     }
   }
-
-  const hasActiveFilters = keyword.trim() || Object.values(appliedFilters).some(v => v !== "" && v !== undefined && v !== false)
 
   const getCurrentTrips = () => {
     switch (activeTab) {
@@ -243,17 +280,32 @@ export default function Page() {
 
   const currentTrips = getCurrentTrips()
 
+  // Show loading if checking authentication or no user data yet
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-[#00e2b7] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-teal-50">
         <div className="px-4 pt-4 md:px-6 md:pt-6">
-          <HeroBanner name="User" />
+          <div className="flex items-center justify-between mb-4">
+            <HeroBanner name={user.name} />
+          
+          </div>
         </div>
        
         <div className="px-4 pb-4 md:px-6 md:pb-6 max-w-7xl mx-auto">
           <div className="text-center py-12">
             <p className="text-red-600 mb-4">Failed to load trips</p>
-            <Button onClick={() => window.location.reload()}>Retry</Button>
+            <Button onClick={() => mutate()}>Retry</Button>
           </div>
         </div>
       </div>
@@ -262,9 +314,12 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br rounded-lg from-cyan-50 to-teal-50">
-      {/* Hero Section with reduced bottom padding */}
+      {/* Hero Section with logout button */}
       <div className="px-4 pt-4 pb-2 md:px-6 md:pt-6 md:pb-3">
-        <HeroBanner name="User" />
+        <div className="flex items-center justify-between">
+          <HeroBanner name={user.name} />
+    
+        </div>
       </div>
       
       {/* Main Content with reduced top padding */}
@@ -357,10 +412,19 @@ export default function Page() {
               <div className="mt-6 pt-6 border-t border-slate-200">
                 <h3 className="text-sm font-medium text-slate-900 mb-3">Quick Actions</h3>
                 <div className="space-y-2">
-                  <Button className="w-full justify-start bg-[#00e2b7] hover:bg-teal-600" size="sm" onClick={() => window.location.href = '/dashboard/create-trip'}>
+                  <Button 
+                    className="w-full justify-start bg-[#00e2b7] hover:bg-teal-600" 
+                    size="sm" 
+                    onClick={() => router.push('/dashboard/create-trip')}
+                  >
                     Create New Trip
                   </Button>
-                  <Button variant="outline" className="w-full justify-start border-teal-300 text-teal-700 hover:bg-teal-50" size="sm" onClick={() => setIsJoinModalOpen(true)}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start border-teal-300 text-teal-700 hover:bg-teal-50" 
+                    size="sm" 
+                    onClick={() => setIsJoinModalOpen(true)}
+                  >
                     Join a Trip
                   </Button>
                 </div>
@@ -429,215 +493,8 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Search and Filter Controls */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 mb-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Search trips..."
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    className="bg-slate-50 border-slate-200 focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {hasActiveFilters && (
-                    <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-slate-600">
-                      <X className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">Clear</span>
-                    </Button>
-                  )}
-                  
-                  <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2 border-teal-300 text-teal-700 hover:bg-teal-50">
-                        <Filter className="w-4 h-4" />
-                        <span className="hidden sm:inline">Filters</span>
-                        {hasActiveFilters && (
-                          <span className="bg-[#00e2b7] text-white text-xs px-2 py-1 rounded-full ml-1">
-                            Active
-                          </span>
-                        )}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Filter Trips</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                              id="location"
-                              placeholder="Greece, Tokyo..."
-                              value={tempFilters.location || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, location: e.target.value }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="status">Status</Label>
-                            <select
-                              id="status"
-                              className="mt-2 block w-full rounded-md border border-slate-200 bg-white p-2 text-sm focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                              value={tempFilters.status || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, status: e.target.value as "open" | "closed" | "" }))}
-                            >
-                              <option value="">Any</option>
-                              <option value="open">Open</option>
-                              <option value="closed">Closed</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="days">Days</Label>
-                            <Input
-                              id="days"
-                              type="number"
-                              min={1}
-                              placeholder="7"
-                              value={tempFilters.days || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, days: Number(e.target.value) }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="people">People</Label>
-                            <Input
-                              id="people"
-                              type="number"
-                              min={1}
-                              placeholder="4"
-                              value={tempFilters.people || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, people: Number(e.target.value) }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="feeMin">Min Fee</Label>
-                            <Input
-                              id="feeMin"
-                              type="number"
-                              min={0}
-                              placeholder="0"
-                              value={tempFilters.feeMin || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, feeMin: Number(e.target.value) }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="feeMax">Max Fee</Label>
-                            <Input
-                              id="feeMax"
-                              type="number"
-                              min={0}
-                              placeholder="5000"
-                              value={tempFilters.feeMax || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, feeMax: Number(e.target.value) }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="dateFrom">From Date</Label>
-                            <Input
-                              id="dateFrom"
-                              type="date"
-                              value={tempFilters.dateFrom || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="dateTo">To Date</Label>
-                            <Input
-                              id="dateTo"
-                              type="date"
-                              value={tempFilters.dateTo || ""}
-                              onChange={(e) => setTempFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                              className="focus:border-[#00e2b7] focus:ring-[#00e2b7]"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            id="eighteenPlus"
-                            checked={tempFilters.eighteenPlus || false}
-                            onCheckedChange={(checked) => setTempFilters(prev => ({ ...prev, eighteenPlus: checked }))}
-                          />
-                          <Label htmlFor="eighteenPlus">18+ only</Label>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t">
-                        <Button variant="outline" onClick={handleClearFilters}>
-                          Clear All
-                        </Button>
-                        <div className="flex gap-2">
-                          <Button variant="outline" onClick={() => setIsFilterOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button onClick={handleApplyFilters} className="bg-[#00e2b7] hover:bg-teal-600">
-                            Apply Filters
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </div>
-
-            {/* Trip Cards Area */}
-            <div className="space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-slate-900">
-                    {activeTab === "all" && "All Trips"}
-                    {activeTab === "created" && "Created by Me"}
-                    {activeTab === "joined" && "Joined Trips"}
-                    {activeTab === "history" && "Trip History"}
-                  </h1>
-                  <p className="text-slate-600 mt-1">{currentTrips.length} trips found</p>
-                </div>
-
-                {/* Mobile Quick Actions */}
-                <div className="lg:hidden">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="border-teal-300 text-teal-700 hover:bg-teal-50">
-                        <Menu className="w-4 h-4 mr-1" />
-                        Actions
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-sm">
-                      <DialogHeader>
-                        <DialogTitle>Quick Actions</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-3 py-4">
-                        <Button className="w-full justify-start bg-[#00e2b7] hover:bg-teal-600" onClick={() => window.location.href = '/dashboard/create-trip'}>
-                          Create New Trip
-                        </Button>
-                        <Button variant="outline" className="w-full justify-start border-teal-300 text-teal-700 hover:bg-teal-50" onClick={() => setIsJoinModalOpen(true)}>
-                          Join a Trip
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-
+            {/* Content Section */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               {/* Loading State */}
               {isLoading ? (
                 <div className="text-center py-12">
@@ -648,18 +505,17 @@ export default function Page() {
                 <>
                   {/* Trip Cards Grid */}
                   {currentTrips.length > 0 ? (
-                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 p-6">
                       {currentTrips.map((trip, i) => (
                         <TripCard 
                           key={trip.id} 
                           trip={trip} 
                           seed={i}
-                          imagePath={getRandomTripImage(trip.id + i)}
                         />
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 md:py-16 bg-white rounded-2xl border border-slate-200">
+                    <div className="text-center py-12 md:py-16">
                       <div className="w-16 h-16 bg-teal-50 rounded-full grid place-items-center mx-auto mb-4">
                         <MapPin className="w-8 h-8 text-[#00e2b7]" />
                       </div>
@@ -676,7 +532,7 @@ export default function Page() {
                         {activeTab === "all" && "Create or join a trip to get started"}
                       </p>
                       {activeTab === "created" && (
-                        <Button onClick={() => window.location.href = '/dashboard/create-trip'} className="bg-[#00e2b7] hover:bg-teal-600">
+                        <Button onClick={() => router.push('/dashboard/create-trip')} className="bg-[#00e2b7] hover:bg-teal-600">
                           Create Your First Trip
                         </Button>
                       )}
@@ -687,7 +543,7 @@ export default function Page() {
                       )}
                       {activeTab === "all" && (
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                          <Button onClick={() => window.location.href = '/dashboard/create-trip'} className="bg-[#00e2b7] hover:bg-teal-600">
+                          <Button onClick={() => router.push('/dashboard/create-trip')} className="bg-[#00e2b7] hover:bg-teal-600">
                             Create Trip
                           </Button>
                           <Button variant="outline" onClick={() => setIsJoinModalOpen(true)} className="border-teal-300 text-teal-700 hover:bg-teal-50">

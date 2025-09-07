@@ -1,4 +1,3 @@
-
 import { JWTPayload, SignJWT, jwtVerify } from "jose"
 import { cookies } from "next/headers"
 
@@ -49,6 +48,30 @@ export async function createSession(userId: number, email: string, name: string,
   return session
 }
 
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies()
+  const cookie = cookieStore.get("session")?.value
+  const session = await decrypt(cookie)
+
+  if (!session?.userId) {
+    return null
+  }
+
+  // Check if session is expired
+  if (new Date() > new Date(session.expiresAt)) {
+    await deleteSession()
+    return null
+  }
+
+  return { 
+    userId: session.userId, 
+    email: session.email, 
+    name: session.name, 
+    role: session.role,
+    expiresAt: session.expiresAt
+  }
+}
+
 export async function verifySession() {
   const cookieStore = await cookies()
   const cookie = cookieStore.get("session")?.value
@@ -62,6 +85,11 @@ export async function verifySession() {
 }
 
 export async function deleteSession() {
+  const cookieStore = await cookies()
+  cookieStore.delete("session")
+}
+
+export async function destroySession() {
   const cookieStore = await cookies()
   cookieStore.delete("session")
 }
