@@ -26,11 +26,10 @@ export const users = pgTable("users", {
   countryCode: varchar("country_code", { length: 5 }),
   address: text("address"),
   description: text("description"),
-  // SOS contacts stored as JSON string in text columns (nullable)
+
   sosPhoneNumbers: text("sos_phone_numbers"),
   sosEmails: text("sos_emails"),
 
-  // store if each detail is Aadhaar-verified
   isNameVerified: boolean("is_name_verified").default(false),
   isPhoneVerified: boolean("is_phone_verified").default(false),
   isAddressVerified: boolean("is_address_verified").default(false),
@@ -42,7 +41,7 @@ export const trips = pgTable("trips", {
   description: text("description"),
   creatorId: integer("creator_id").references(() => users.id, { onDelete: "cascade" }),
   inviteCode: varchar("invite_code", { length: 50 }).notNull().unique(),
-  status: varchar("status", { length: 20 }).default("planned"), // planned, active, completed, cancelled
+  status: varchar("status", { length: 20 }).default("planned"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   maxMembers: integer("max_members").default(10),
@@ -58,8 +57,8 @@ export const tripMembers = pgTable(
     id: serial("id").primaryKey(),
     tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-    role: varchar("role", { length: 20 }).default("member"), // creator, admin, member
-    status: varchar("status", { length: 20 }).default("approved"), // approved, pending
+    role: varchar("role", { length: 20 }).default("member"),
+    status: varchar("status", { length: 20 }).default("approved"),
     joinedAt: timestamp("joined_at").defaultNow(),
   },
   (table) => ({
@@ -74,7 +73,7 @@ export const tripJoinRequests = pgTable(
     tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
     message: text("message"),
-    status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
+    status: varchar("status", { length: 20 }).default("pending"),
     requestedAt: timestamp("requested_at").defaultNow(),
     respondedAt: timestamp("responded_at"),
     respondedBy: integer("responded_by").references(() => users.id),
@@ -121,7 +120,7 @@ export const notifications = pgTable(
   {
     id: serial("id").primaryKey(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-    type: varchar("type", { length: 50 }).notNull(), // trip_enrollment, trip_start, trip_update, trip_complete, join_request
+    type: varchar("type", { length: 50 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
     message: text("message").notNull(),
     tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
@@ -132,18 +131,19 @@ export const notifications = pgTable(
   },
 )
 
-// Relations
+/* ================= Relations ================= */
+
 export const usersRelations = relations(users, ({ many }) => ({
   createdTrips: many(trips),
   tripMemberships: many(tripMembers),
   locations: many(userLocations),
 
-  // who requested to join
   joinRequests: many(tripJoinRequests, { relationName: "join_request_user" }),
-  // who responded (approved/rejected requests)
   respondedJoinRequests: many(tripJoinRequests, { relationName: "join_request_responder" }),
   feedback: many(tripFeedback),
-  notifications: many(notifications),
+
+  notifications: many(notifications, { relationName: "notification_owner" }),
+  relatedNotifications: many(notifications, { relationName: "notification_related_user" }),
 }))
 
 export const tripsRelations = relations(trips, ({ one, many }) => ({
@@ -174,13 +174,11 @@ export const tripJoinRequestsRelations = relations(tripJoinRequests, ({ one }) =
     fields: [tripJoinRequests.tripId],
     references: [trips.id],
   }),
-  // who made the join request
   user: one(users, {
     fields: [tripJoinRequests.userId],
     references: [users.id],
     relationName: "join_request_user",
   }),
-  // which user responded (approved/rejected)
   respondedByUser: one(users, {
     fields: [tripJoinRequests.respondedBy],
     references: [users.id],
@@ -214,6 +212,7 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
     references: [users.id],
+    relationName: "notification_owner",
   }),
   trip: one(trips, {
     fields: [notifications.tripId],
@@ -222,5 +221,6 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   relatedUser: one(users, {
     fields: [notifications.relatedUserId],
     references: [users.id],
+    relationName: "notification_related_user",
   }),
 }))
