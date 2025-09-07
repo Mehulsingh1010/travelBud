@@ -5,6 +5,7 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <SignUp
+          afterSignUpUrl="/dashboard"
           appearance={{
             elements: {
               formButtonPrimary: "bg-[#40e0d0] hover:bg-[#20f0e8] text-gray-900",

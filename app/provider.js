@@ -16,11 +16,11 @@ function Provider({ children }) {
   const checkNewUser = async () => {
     try {
       
-      const response = await axios.post("/api/create-user", {
+      const response = await axios.post("/app/api/create-user", {
         user: {
           id: user.id,
           email: user.emailAddresses[0]?.emailAddress,
-          username: user.username || user.firstName || user.id,
+          name: user.username || user.firstName || user.id,
         },
       });
       console.log(response.data.message);
