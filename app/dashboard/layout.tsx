@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   const session = await verifySession()
 
   if (!session) {
-    redirect("/login")
+    redirect("/sign-in")
   }
 
   return (

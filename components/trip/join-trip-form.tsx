@@ -61,7 +61,7 @@ export function JoinTripForm({ trip }: JoinTripFormProps) {
       } else {
         if (response.status === 401) {
           // User not logged in
-          router.push(`/login?redirect=/join/${trip.inviteCode}`)
+          router.push(`/sign-in?redirect=/join/${trip.inviteCode}`)
           return
         }
         toast({

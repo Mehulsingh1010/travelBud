@@ -15,7 +15,7 @@ export default async function TripPage({ params }: TripPageProps) {
   const session = await verifySession()
 
   if (!session) {
-    redirect("/login")
+    redirect("/sign-in")
   }
 
   const tripId = Number.parseInt(params.tripId)
