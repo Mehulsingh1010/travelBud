@@ -45,6 +45,20 @@ const menuItems = [
   // { title: "Notifications", url: "/dashboard/notifications", icon: Bell, id: "notifications" },
 ]
 
+// Helper function to get user-friendly location error messages
+const getLocationErrorMessage = (errorCode: number): string => {
+  switch (errorCode) {
+    case 1: // PERMISSION_DENIED
+      return "Location access denied. Using last known location."
+    case 2: // POSITION_UNAVAILABLE
+      return "Location unavailable. Using last known location."
+    case 3: // TIMEOUT
+      return "Location request timeout. Using last known location."
+    default:
+      return "Could not determine location. Using last known location."
+  }
+}
+
 export function AppSidebar() {
   const [user, setUser] = useState<User | null>(null)
   const [isLoadingUser, setIsLoadingUser] = useState(true)
@@ -107,9 +121,42 @@ export function AppSidebar() {
     router.push("/dashboard/create-trip")
   }
 
+  // Enhanced SOS function with location integration
   const handleSOS = async () => {
     setShowSOSDialog(false)
     setIsSOSLoading(true)
+    
+    let locationData = {}
+    let locationError = null
+    
+    // Try to get current location
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 15000, // 15 seconds timeout
+            maximumAge: 60000 // Accept location up to 1 minute old
+          })
+        })
+        
+        locationData = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: new Date().toISOString()
+        }
+        
+        console.log("Current location obtained:", locationData)
+      } catch (error) {
+        console.log("Could not get current location:", error)
+        locationError = error instanceof GeolocationPositionError 
+          ? getLocationErrorMessage(error.code)
+          : "Location access denied or unavailable"
+      }
+    } else {
+      locationError = "Geolocation not supported by this browser"
+    }
     
     try {
       const response = await fetch("/api/emergency/sos", {
@@ -117,13 +164,25 @@ export function AppSidebar() {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          ...locationData,
+          locationError
+        }),
       })
 
       if (response.ok) {
         const data = await response.json()
+        
+        let description = `Emergency emails sent to all listed contacts!`
+        if (locationError) {
+          description += `\n⚠️ ${locationError}`
+        } else {
+          description += `\n📍 Current location included`
+        }
+        
         toast({
           title: "🚨 SOS Activated",
-          description: `Emergency alerts sent to ${data.contactsSent} contacts!`,
+          description,
           variant: "destructive",
         })
         setCooldown(60) // 1 minute cooldown
@@ -289,7 +348,9 @@ export function AppSidebar() {
               <AlertDialogHeader>
                 <AlertDialogTitle>⚠️ Emergency SOS Activation</AlertDialogTitle>
                 <AlertDialogDescription className="text-white">
-                  This will immediately send <strong>emergency alerts via SMS, email, and voice calls</strong> to all your registered SOS contacts.
+                  This will immediately send <strong>emergency alerts via email</strong> to all your registered SOS contacts.
+                  <br /><br />
+                  Your current location will be included if available.
                   <br /><br />
                   Only use this in genuine emergency situations.
                 </AlertDialogDescription>
