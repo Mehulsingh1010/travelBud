@@ -36,10 +36,6 @@ interface User {
   role: string
 }
 
-interface AppSidebarProps {
-  user: User
-}
-
 const menuItems = [
   { title: "My Trips", url: "/dashboard", icon: Map, id: "dashboard" },
   { title: "Live Map", url: "/dashboard/map", icon: MapPin, id: "map" },
@@ -49,15 +45,41 @@ const menuItems = [
   // { title: "Notifications", url: "/dashboard/notifications", icon: Bell, id: "notifications" },
 ]
 
-export function AppSidebar({ user }: AppSidebarProps) {
+export function AppSidebar() {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [showSOSDialog, setShowSOSDialog] = useState(false)
+  const [isSOSLoading, setIsSOSLoading] = useState(false)
   const [notificationCount] = useState(3)
   const [cooldown, setCooldown] = useState(0)
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
+
+  // Fetch user data from session
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me")
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+        } else {
+          // If not authenticated, redirect to login
+          router.push("/login")
+        }
+      } catch (error) {
+        console.error("Failed to fetch user:", error)
+        router.push("/login")
+      } finally {
+        setIsLoadingUser(false)
+      }
+    }
+
+    fetchUser()
+  }, [router])
 
   useEffect(() => {
     let timer: NodeJS.Timeout
@@ -72,7 +94,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
     setShowLogoutDialog(false)
     try {
       await fetch("/api/auth/logout", { method: "POST" })
-      localStorage.removeItem("travel_buddy_session")
       toast({ title: "Signed out", description: "See you on your next adventure!" })
       router.push("/")
     } catch {
@@ -86,18 +107,48 @@ export function AppSidebar({ user }: AppSidebarProps) {
     router.push("/dashboard/create-trip")
   }
 
-  const handleSOS = () => {
+  const handleSOS = async () => {
     setShowSOSDialog(false)
-    console.log("🚨 SOS Triggered! Send alerts here...")
-    toast({
-      title: "🚨 SOS Activated",
-      description: "Emergency alerts are being sent!",
-      variant: "sos",
-    })
-    setCooldown(5)
+    setIsSOSLoading(true)
+    
+    try {
+      const response = await fetch("/api/emergency/sos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: "🚨 SOS Activated",
+          description: `Emergency alerts sent to ${data.contactsSent} contacts!`,
+          variant: "destructive",
+        })
+        setCooldown(60) // 1 minute cooldown
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "SOS Failed",
+          description: errorData.error || "Failed to send emergency alerts",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("SOS Error:", error)
+      toast({
+        title: "SOS Error",
+        description: "Failed to activate SOS. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSOSLoading(false)
+    }
   }
 
   const getUserName = () => {
+    if (!user) return "Loading..."
     return user.name || user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1)
   }
 
@@ -109,6 +160,20 @@ export function AppSidebar({ user }: AppSidebarProps) {
     if (pathname === "/dashboard/history") return "history"
     if (pathname === "/dashboard/notifications") return "notifications"
     return "dashboard"
+  }
+
+  // Show loading state while fetching user
+  if (isLoadingUser || !user) {
+    return (
+      <Sidebar
+        variant="floating"
+        className="border-r-0 backdrop-blur-sm rounded-xl m-4 h-[calc(100vh-2rem)] flex flex-col"
+      >
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00e2b7]"></div>
+        </div>
+      </Sidebar>
+    )
   }
 
   const activeTab = getActiveTab()
@@ -210,26 +275,33 @@ export function AppSidebar({ user }: AppSidebarProps) {
               <Button
                 className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-md rounded-lg font-semibold"
                 size="sm"
-                disabled={cooldown > 0}
+                disabled={cooldown > 0 || isSOSLoading}
               >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : "🚨 SOS"}
+                {isSOSLoading 
+                  ? "Sending..." 
+                  : cooldown > 0 
+                    ? `Resend in ${cooldown}s` 
+                    : "🚨 SOS"
+                }
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-red-600 text-white">
               <AlertDialogHeader>
-                <AlertDialogTitle>Confirm SOS Activation</AlertDialogTitle>
+                <AlertDialogTitle>⚠️ Emergency SOS Activation</AlertDialogTitle>
                 <AlertDialogDescription className="text-white">
-                  Are you sure you want to trigger SOS?  
-                  This will send <strong>emails, SMS, and calls</strong> to your emergency contacts.
+                  This will immediately send <strong>emergency alerts via SMS, email, and voice calls</strong> to all your registered SOS contacts.
+                  <br /><br />
+                  Only use this in genuine emergency situations.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="text-black bg-white">Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleSOS}
+                  disabled={isSOSLoading}
                   className="bg-white text-red-600 hover:bg-gray-100 font-semibold"
                 >
-                  Trigger SOS
+                  {isSOSLoading ? "Activating..." : "🚨 ACTIVATE SOS"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -238,41 +310,40 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between mb-4">
-        <Link href="/dashboard/notifications" className="relative">
-  <Button
-    variant="ghost"
-    size="icon"
-    className={cn(
-      "h-9 w-9 relative rounded-lg",
-      pathname === "/dashboard/notifications"
-        ? "bg-[#36d6ba] text-white" 
-        : "text-gray-500 hover:text-teal-600 hover:bg-teal-50"
-    )}
-  >
-    <Bell className="h-4 w-4" />
-    {notificationCount > 0 && (
-      <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#00e2b7] text-white text-xs flex items-center justify-center">
-        {notificationCount}
-      </span>
-    )}
-  </Button>
-</Link>
-
+          <Link href="/dashboard/notifications" className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-9 w-9 relative rounded-lg",
+                pathname === "/dashboard/notifications"
+                  ? "bg-[#36d6ba] text-white" 
+                  : "text-gray-500 hover:text-teal-600 hover:bg-teal-50"
+              )}
+            >
+              <Bell className="h-4 w-4" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#00e2b7] text-white text-xs flex items-center justify-center">
+                  {notificationCount}
+                </span>
+              )}
+            </Button>
+          </Link>
 
           <Link href="/profile">
-  <Button
-    variant="ghost"
-    size="icon"
-    className={cn(
-      "h-9 w-9 rounded-lg",
-      pathname === "/profile"
-        ? "bg-[#36d6ba] text-white" // highlighted when active
-        : "text-gray-500 hover:text-teal-600 hover:bg-teal-50"
-    )}
-  >
-    <Settings className="h-4 w-4" />
-  </Button>
-</Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-9 w-9 rounded-lg",
+                pathname === "/profile"
+                  ? "bg-[#36d6ba] text-white" 
+                  : "text-gray-500 hover:text-teal-600 hover:bg-teal-50"
+              )}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </Link>
 
           <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
             <AlertDialogTrigger asChild>
