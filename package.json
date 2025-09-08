@@ -72,7 +72,7 @@
     "jose": "^6.1.0",
     "knex": "latest",
     "kysely": "latest",
-    "leaflet": "latest",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.454.0",
     "mysql2": "latest",
     "nanoid": "latest",
@@ -85,6 +85,7 @@
     "react-day-picker": "8.10.1",
     "react-dom": "^18",
     "react-hook-form": "^7.54.1",
+    "react-leaflet": "^5.0.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
     "server-only": "latest",
@@ -98,6 +99,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.20",
     "@types/node": "^22",
     "@types/nodemailer": "^7.0.1",
     "@types/react": "^18",
