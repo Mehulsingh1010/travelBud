@@ -44,6 +44,16 @@ import { LiveMap } from "@/components/map/live-map"
 
 import { BalanceResponse } from "@/lib/expenses/getBalance";
 import ExpenseSummaryCard from "@/components/expenses/ExpenseSummaryCard";
+import TripPhotosClient from "./TripPhotosClient"
+
+type Photo = {
+  id: number;
+  tripId: number;
+  userId: number;
+  url: string;
+  caption?: string | null;
+  createdAt?: string | null;
+};
 
 interface TripManagementProps {
   trip: any
@@ -53,9 +63,10 @@ interface TripManagementProps {
   userRole: string
   tripId: number;
   balances: BalanceResponse;
+  initialPhotos: Photo[];
 }
 
-export function TripManagement({ trip, members, joinRequests, currentUser, userRole, tripId, balances }: TripManagementProps) {
+export function TripManagement({ trip, members, joinRequests, currentUser, userRole, tripId, balances, initialPhotos }: TripManagementProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
@@ -380,6 +391,16 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
       )}
       {/* Expense Summary */}
       <ExpenseSummaryCard tripId={tripId} balances={balances} />
+      
+      {/* Trip Photos */}
+      <Card>
+          <CardHeader>
+            <CardTitle>Trip Photos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TripPhotosClient tripId={tripId} currentUser={currentUser} initialPhotos={initialPhotos} />
+          </CardContent>
+      </Card>
 
       {/* Trip Management Tabs */}
       <Tabs defaultValue="members" className="space-y-6">
