@@ -1,5 +1,4 @@
-
-import { SignJWT, jwtVerify } from "jose"
+import { JWTPayload, SignJWT, jwtVerify } from "jose"
 import { cookies } from "next/headers"
 
 const secretKey = process.env.SESSION_SECRET || "fallback-secret-key"
@@ -14,7 +13,7 @@ export interface SessionPayload {
 }
 
 export async function encrypt(payload: SessionPayload) {
-  return new SignJWT(payload)
+  return new SignJWT(payload as unknown as JWTPayload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -26,7 +25,7 @@ export async function decrypt(session: string | undefined = "") {
     const { payload } = await jwtVerify(session, encodedKey, {
       algorithms: ["HS256"],
     })
-    return payload as SessionPayload
+    return { ...payload, expiresAt: new Date(payload.expiresAt as string) } as SessionPayload
   } catch (error) {
     console.log("Failed to verify session")
     return null
@@ -49,6 +48,30 @@ export async function createSession(userId: number, email: string, name: string,
   return session
 }
 
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies()
+  const cookie = cookieStore.get("session")?.value
+  const session = await decrypt(cookie)
+
+  if (!session?.userId) {
+    return null
+  }
+
+  // Check if session is expired
+  if (new Date() > new Date(session.expiresAt)) {
+    await deleteSession()
+    return null
+  }
+
+  return { 
+    userId: session.userId, 
+    email: session.email, 
+    name: session.name, 
+    role: session.role,
+    expiresAt: session.expiresAt
+  }
+}
+
 export async function verifySession() {
   const cookieStore = await cookies()
   const cookie = cookieStore.get("session")?.value
@@ -62,6 +85,11 @@ export async function verifySession() {
 }
 
 export async function deleteSession() {
+  const cookieStore = await cookies()
+  cookieStore.delete("session")
+}
+
+export async function destroySession() {
   const cookieStore = await cookies()
   cookieStore.delete("session")
 }

@@ -21,6 +21,18 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 50 }).default("user"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+
+  phoneNumber: varchar("phone_number", { length: 15 }),
+  countryCode: varchar("country_code", { length: 5 }),
+  address: text("address"),
+  description: text("description"),
+
+  sosPhoneNumbers: text("sos_phone_numbers"),
+  sosEmails: text("sos_emails"),
+
+  isNameVerified: boolean("is_name_verified").default(false),
+  isPhoneVerified: boolean("is_phone_verified").default(false),
+  isAddressVerified: boolean("is_address_verified").default(false),
 })
 
 export const trips = pgTable("trips", {
@@ -29,11 +41,12 @@ export const trips = pgTable("trips", {
   description: text("description"),
   creatorId: integer("creator_id").references(() => users.id, { onDelete: "cascade" }),
   inviteCode: varchar("invite_code", { length: 50 }).notNull().unique(),
-  status: varchar("status", { length: 20 }).default("planned"), // planned, active, completed, cancelled
+  status: varchar("status", { length: 20 }).default("planned"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   maxMembers: integer("max_members").default(10),
   isActive: boolean("is_active").default(true),
+  baseCurrency: varchar("base_currency", { length: 10 }).default("INR"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 })
@@ -44,8 +57,8 @@ export const tripMembers = pgTable(
     id: serial("id").primaryKey(),
     tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-    role: varchar("role", { length: 20 }).default("member"), // creator, admin, member
-    status: varchar("status", { length: 20 }).default("approved"), // approved, pending
+    role: varchar("role", { length: 20 }).default("member"),
+    status: varchar("status", { length: 20 }).default("approved"),
     joinedAt: timestamp("joined_at").defaultNow(),
   },
   (table) => ({
@@ -60,7 +73,7 @@ export const tripJoinRequests = pgTable(
     tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
     message: text("message"),
-    status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
+    status: varchar("status", { length: 20 }).default("pending"),
     requestedAt: timestamp("requested_at").defaultNow(),
     respondedAt: timestamp("responded_at"),
     respondedBy: integer("responded_by").references(() => users.id),
@@ -102,13 +115,35 @@ export const userLocations = pgTable(
   }),
 )
 
-// Relations
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    message: text("message").notNull(),
+    tripId: integer("trip_id").references(() => trips.id, { onDelete: "cascade" }),
+    tripName: varchar("trip_name", { length: 255 }),
+    relatedUserId: integer("related_user_id").references(() => users.id, { onDelete: "cascade" }),
+    isRead: boolean("is_read").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+)
+
+/* ================= Relations ================= */
+
 export const usersRelations = relations(users, ({ many }) => ({
   createdTrips: many(trips),
   tripMemberships: many(tripMembers),
   locations: many(userLocations),
-  joinRequests: many(tripJoinRequests),
+
+  joinRequests: many(tripJoinRequests, { relationName: "join_request_user" }),
+  respondedJoinRequests: many(tripJoinRequests, { relationName: "join_request_responder" }),
   feedback: many(tripFeedback),
+
+  notifications: many(notifications, { relationName: "notification_owner" }),
+  relatedNotifications: many(notifications, { relationName: "notification_related_user" }),
 }))
 
 export const tripsRelations = relations(trips, ({ one, many }) => ({
@@ -120,6 +155,7 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
   locations: many(userLocations),
   joinRequests: many(tripJoinRequests),
   feedback: many(tripFeedback),
+  notifications: many(notifications),
 }))
 
 export const tripMembersRelations = relations(tripMembers, ({ one }) => ({
@@ -141,10 +177,12 @@ export const tripJoinRequestsRelations = relations(tripJoinRequests, ({ one }) =
   user: one(users, {
     fields: [tripJoinRequests.userId],
     references: [users.id],
+    relationName: "join_request_user",
   }),
   respondedByUser: one(users, {
     fields: [tripJoinRequests.respondedBy],
     references: [users.id],
+    relationName: "join_request_responder",
   }),
 }))
 
@@ -167,5 +205,22 @@ export const userLocationsRelations = relations(userLocations, ({ one }) => ({
   trip: one(trips, {
     fields: [userLocations.tripId],
     references: [trips.id],
+  }),
+}))
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+    relationName: "notification_owner",
+  }),
+  trip: one(trips, {
+    fields: [notifications.tripId],
+    references: [trips.id],
+  }),
+  relatedUser: one(users, {
+    fields: [notifications.relatedUserId],
+    references: [users.id],
+    relationName: "notification_related_user",
   }),
 }))
