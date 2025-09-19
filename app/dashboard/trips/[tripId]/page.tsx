@@ -1,6 +1,6 @@
 import { verifySession } from "@/lib/auth/session"
 import { db } from "@/lib/db"
-import { trips, tripMembers, users, tripJoinRequests } from "@/lib/db/schema"
+import { trips, tripMembers, users, tripJoinRequests, tripPhotos } from "@/lib/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { notFound, redirect } from "next/navigation"
 import { TripManagement } from "@/components/trip/trip-management"
@@ -58,6 +58,20 @@ export default async function TripPage({ params }: TripPageProps) {
     .where(eq(tripMembers.tripId, tripId))
     .orderBy(desc(tripMembers.joinedAt))
 
+ // fetch rows from DB
+ const rows = await db.select().from(tripPhotos).where(eq(tripPhotos.tripId, tripId)).orderBy(tripPhotos.createdAt);
+ 
+ // convert Date -> ISO string so it's serializable & meets client types
+ const initialPhotos = rows.map((p) => ({
+   id: p.id,
+   tripId: p.tripId,
+   userId: p.userId,
+   url: p.url,
+   caption: p.caption ?? null,
+   // convert Date to ISO string (or null)
+   createdAt: p.createdAt ? (p.createdAt as Date).toISOString() : null,
+ }))
+
   // Get pending join requests (only for admins/creators)
   const isAdmin = membership[0].role === "creator" || membership[0].role === "admin"
   let joinRequests: any[] = []
@@ -87,6 +101,7 @@ export default async function TripPage({ params }: TripPageProps) {
       userRole={membership[0].role!}
       tripId={tripId}
       balances={balances}
+      initialPhotos={initialPhotos}
       />
   )
 }

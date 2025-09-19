@@ -224,3 +224,13 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     relationName: "notification_related_user",
   }),
 }))
+
+export const tripPhotos = pgTable("trip_photos", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  url: text("url").notNull(),            // imgbb returned URL (display_url)
+  deleteUrl: text("delete_url"),
+  caption: text("caption").default(""),
+  createdAt: timestamp("created_at").defaultNow(),
+});
