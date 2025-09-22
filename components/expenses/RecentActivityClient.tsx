@@ -5,6 +5,9 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import ExpenseDetailsModal from "@/components/expenses/ExpenseDetailsModal"
 import { formatCurrency } from "@/lib/expenses/formatCurrency"
+import { useRouter } from "next/navigation"
+import { Trash } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 type ItemExpense = {
   kind: "expense"
@@ -24,6 +27,8 @@ type ItemSettlement = {
   amount: number
   currency: string
   createdAtISO: string | null
+  fromUserId: number
+  toUserId: number
 }
 
 type Item = ItemExpense | ItemSettlement
@@ -33,14 +38,36 @@ export default function RecentActivityClient({
   currency,
   tripId,
   currentUser,
+  userRole,
 }: {
   items: Item[]
   currency: string
   tripId: number
   currentUser?: { id: number; name?: string }
+  userRole?: string
 }) {
   const [open, setOpen] = useState(false)
   const [selectedExpenseId, setSelectedExpenseId] = useState<number | null>(null)
+  const router = useRouter()
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  async function DeleteSettlement(id:number){
+    if(!confirm("Deleting this settlement cannot be undone. Are you sure?")) return;
+    setDeletingId(id)
+    try{
+      const res = await fetch(`/api/trips/${tripId}/settlements/${id}`, {
+        method: "DELETE",
+        credentials:"same-origin",
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload?.error || "Failed to delete settlement")
+        router.refresh()
+    } catch(err:any){
+      alert(err?.message || "Error deleting settlement")
+    } finally{
+      setDeletingId(null)
+    }
+  }
 
   return (
     <>
@@ -101,22 +128,58 @@ export default function RecentActivityClient({
                       </>
                     )
                   })()}
-                  {/* Optionally show total under it as smaller helper */}
+                  {/* Show total under it as smaller helper */}
                   <p className="text-xs text-slate-500 mt-1">Total: {formatCurrency(item.amountConverted, currency)}</p>
                 </div>
               </Card>
             </button>
           ) : (
-            <Card key={`set-${item.id}`} className="p-4 bg-gradient-to-r from-[#00e2b7] to-teal-600 text-white">
-              <p className="text-sm font-medium">
-                {item.fromLabel} paid {item.toLabel} {formatCurrency(item.amount, item.currency)}
-              </p>
+            // Settlement card — show delete button if allowed
+            <Card key={`set-${item.id}`} className="p-4 bg-gradient-to-r from-[#00e2b7] to-teal-600 text-white flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  {item.fromLabel} paid {item.toLabel} {formatCurrency((item as ItemSettlement).amount, (item as ItemSettlement).currency)}
+                </p>
+                <p className="text-xs text-slate-500">{(item as ItemSettlement).createdAtISO ? new Date((item as ItemSettlement).createdAtISO!).toLocaleString() : ""}</p>
+              </div>
+
+              {/* Delete button visible to payer, receiver, or trip admin/creator */}
+              {(() => {
+                const isPayer = currentUser?.id === (item as ItemSettlement).fromUserId
+                const isReceiver = currentUser?.id === (item as ItemSettlement).toUserId
+                const isAdmin = userRole === "admin" || userRole === "creator"
+                if (isPayer || isReceiver || isAdmin) {
+                  return (
+                    <div className="ml-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-500/40 text-white text-sm font-medium rounded-full
+                                   transition-transform duration-150 ease-in-out hover:scale-105 hover:bg-red-600/90 disabled:opacity-50"
+                        onClick={() => DeleteSettlement(item.id)}
+                        disabled={deletingId === item.id}
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        {deletingId === item.id ? "Deleting…" : "Delete"}
+                      </Button>
+                    </div>
+                  )
+                }
+                return null
+              })()}
             </Card>
           )
         )}
       </div>
 
-      <ExpenseDetailsModal tripId={tripId} expenseId={selectedExpenseId} open={open} onOpenChange={setOpen} />
+      <ExpenseDetailsModal
+        tripId={tripId}
+        expenseId={selectedExpenseId}
+        open={open}
+        onOpenChange={setOpen}
+        currentUser={currentUser}
+        userRole={userRole}
+      />
     </>
   )
 }

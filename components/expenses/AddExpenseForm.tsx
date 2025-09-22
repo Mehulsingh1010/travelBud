@@ -54,7 +54,8 @@ export default function AddExpenseForm({
   const [description, setDescription] = useState("")
   const [amount, setAmount] = useState<string>("")
   const [currency, setCurrency] = useState<string>(baseCurrency)
-  const [amountError, setAmountError] = useState<string>("");
+  const [amountError, setAmountError] = useState<string>("")
+  const [submitting, setSubmitting] = useState(false);
 
   // Payers: default = equal, only creator selected
   const [payerMode, setPayerMode] = useState<PayerMode>("equal")
@@ -248,6 +249,8 @@ function renderMemberRow(userId: number, name: string, kind: "payer" | "split") 
 
   // ---------- submit ----------
   async function handleSubmit() {
+    if (submitting) return; // prevent double submit
+    setSubmitting(true);
     const amt = parseFloat(amount || "0")
     if (!title.trim()) {
       toast({ title: "Title required", variant: "destructive" })
@@ -325,6 +328,8 @@ function renderMemberRow(userId: number, name: string, kind: "payer" | "split") 
       router.refresh()
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" })
+    }finally {
+      setSubmitting(false);
     }
   }
 
@@ -518,9 +523,12 @@ function renderMemberRow(userId: number, name: string, kind: "payer" | "split") 
         <div className="pt-2 flex">
           <Button
             onClick={handleSubmit}
-            className="w-full max-w-md mx-auto bg-gradient-to-r from-[#00e2b7] to-teal-600 hover:opacity-95"
+            disabled={submitting}
+            className={`w-full max-w-md mx-auto bg-gradient-to-r from-[#00e2b7] to-teal-600 hover:opacity-95 ${
+              submitting ? "opacity-70 cursor-wait" : ""
+            }`}
           >
-            Save Expense
+            {submitting ? "Saving…" : "Save Expense"}
           </Button>
         </div>
       </CardContent>

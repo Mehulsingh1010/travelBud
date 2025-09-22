@@ -1,7 +1,7 @@
 // app/dashboard/trips/[tripId]/expenses/page.tsx
 
 import { db } from "@/lib/db"
-import { trips, users } from "@/lib/db/schema"
+import { trips, users, tripMembers } from "@/lib/db/schema"
 import { expenses } from "@/lib/db/payments/expenses"
 import { settlements } from "@/lib/db/payments/settlements"
 import { eq, desc } from "drizzle-orm"
@@ -17,6 +17,7 @@ import SettleUpCard from "@/components/expenses/SettleUpCard"
 import RecentActivityClient from "@/components/expenses/RecentActivityClient"
 import { inArray, and } from "drizzle-orm"
 import { expenseSplits, expensePayers } from "@/lib/db/payments"
+import React from "react"
 
 
 // ---------- TYPES ----------
@@ -87,6 +88,11 @@ export default async function ExpensesPage({
   const balances = await getBalances(tripId, session.userId)
   const net = balances.net
   const currency = balances.currency
+
+  const membership = await db.query.tripMembers.findFirst({
+    where: and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, session.userId)),
+  })
+  const userRole = membership?.role ?? "member"
 
   // Recent expenses
   const recentExpenses = await db
@@ -204,68 +210,202 @@ export default async function ExpensesPage({
       {/* Net balance */}
       <div className={`text-2xl font-bold mb-4 ${netClass}`}>{netDisplay}</div>
 
-      {/* TODO: Balances per user list + settle up buttons */}
+      {/* Minimal transfers summary — single-state view */}
       <Card className="p-4">
         <CardHeader>
-          <CardTitle>People you owe / who owe you</CardTitle>
+          <CardTitle>Your Balances</CardTitle>
         </CardHeader>
         <CardContent>
-          {balances.per_user.length > 0 ? (
-            <ul className="divide-y divide-slate-200">
-              {balances.per_user.slice(0, 3).map((cp) => {
-                // amount < 0 => YOU owe THEM
-                const iOweThem = cp.amount < 0
+          {Array.isArray(balances.recommendations) && balances.recommendations.length > 0 ? (
+            (() => {
+              // maps for display names/avatars from per_user (fallback)
+              const nameMap = new Map<number, string>()
+              const avatarMap = new Map<number, string | undefined>()
+              if (Array.isArray(balances.per_user)) {
+                for (const pu of balances.per_user) {
+                  nameMap.set(pu.user_id, pu.name)
+                  avatarMap.set(pu.user_id, pu.avatar_url ?? undefined)
+                }
+              }
+            
+              const recs = balances.recommendations as { fromUserId: number; toUserId: number; amount: number }[]
+            
+              // outgoing: you should pay them
+              const outgoing = recs.filter((r) => r.fromUserId === session.userId)
+              // incoming: they should pay you
+              const incoming = recs.filter((r) => r.toUserId === session.userId)
+            
+              const outgoingTotal = outgoing.reduce((s, r) => s + r.amount, 0)
+              const incomingTotal = incoming.reduce((s, r) => s + r.amount, 0)
+            
+              // decide which single state to show based on net (robust if recommendations contain both)
+              if (balances.net < 0 && outgoingTotal > 0) {
+                // you owe
                 return (
-                  <li key={cp.user_id} className="grid grid-cols-3 items-center gap-4 py-3">
-                    {/* Left: name */}
-                    <span className="text-left font-medium">{cp.name}</span>
-                
-                    {/* Middle: settle button (spacer when not needed to keep alignment) */}
-                    <div className="flex justify-center">
-                      {iOweThem ? (
-                        <SettleUpCard
-                          tripId={tripId}
-                          currentUser={{ id: session.userId, name: session.name || "You" }}
-                          counterparty={{
-                            id: cp.user_id,
-                            name: cp.name,
-                            amountOwed: Math.abs(cp.amount), // smallest units
-                            currency,
-                          }}
-                          trigger={
-                            <Button size="sm" variant="secondary" className="bg-blue-100 text-blue-700">
-                              Settle up →
-                            </Button>
-                          }
-                        />
-                      ) : (
-                        <span className="h-6" />
-                      )}
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">You need to pay</h4>
+                    <div className="mb-3 text-sm text-slate-600">
+                      Total: <span className="font-semibold text-red-600">-{formatCurrency(Math.abs(outgoingTotal), currency)}</span>
                     </div>
-                    
-                    {/* Right: amount */}
-                    <span
-                      className={`text-right ${
-                        cp.amount > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"
-                      }`}
-                    >
-                      {cp.amount > 0 ? "+" : "-"}
-                      {formatCurrency(Math.abs(cp.amount), currency)}
-                    </span>
-                  </li>
+                
+                    <ul className="space-y-2">
+                      {outgoing.map((r, idx) => {
+                        const otherId = r.toUserId
+                        const otherName = nameMap.get(otherId) ?? `User ${otherId}`
+                        const otherAvatar = avatarMap.get(otherId)
+                        return (
+                          <React.Fragment key={`out-${otherId}`}>
+                          <li className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {otherAvatar ? (
+                                <img src={otherAvatar} alt={otherName} className="w-8 h-8 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center text-xs font-semibold">
+                                  {otherName?.charAt(0)?.toUpperCase?.() ?? "U"}
+                                </div>
+                              )}
+                              <div>
+                                <div className="text-sm font-medium">{otherName}</div>
+                                <div className="text-xs text-slate-500">Settle this person directly</div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-red-600">
+                                -{formatCurrency(r.amount, currency)}
+                              </div>
+                            
+                              <SettleUpCard
+                                tripId={tripId}
+                                currentUser={{ id: session.userId, name: session.name || "You" }}
+                                counterparty={{
+                                  id: otherId,
+                                  name: otherName,
+                                  amountOwed: r.amount,
+                                  currency,
+                                }}
+                                trigger={
+                                  <Button size="sm" variant="secondary" className="bg-blue-100 text-blue-700">
+                                    Settle up →
+                                  </Button>
+                                }
+                              />
+                            </div>
+                          </li>
+                          {idx < outgoing.length - 1 && (
+                            <div
+                            role="separator"
+                            aria-hidden
+                            className="h-px bg-gradient-to-r from-transparent via-slate-300 to =-transparent my-2"
+                            />
+                        )}
+                        </React.Fragment>
+                        )
+                      })}
+                    </ul>
+                  </div>
                 )
-              })}
-            </ul>
+              } else if (balances.net > 0 && incomingTotal > 0) {
+                // you are owed
+                return (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">People who should pay you</h4>
+                    <div className="mb-3 text-sm text-slate-600">
+                      Total: <span className="font-semibold text-green-600">+{formatCurrency(incomingTotal, currency)}</span>
+                    </div>
+                
+                    <ul className="space-y-2">
+                      {incoming.map((r, idx) => {
+                        const otherId = r.fromUserId
+                        const otherName = nameMap.get(otherId) ?? `User ${otherId}`
+                        const otherAvatar = avatarMap.get(otherId)
+                        return (
+                          <React.Fragment key={`in-${otherId}`}>
+                          <li className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {otherAvatar ? (
+                                <img src={otherAvatar} alt={otherName} className="w-8 h-8 rounded-full object-cover" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center text-xs font-semibold">
+                                  {otherName?.charAt(0)?.toUpperCase?.() ?? "U"}
+                                </div>
+                              )}
+                              <div>
+                                <div className="text-sm font-medium">{otherName}</div>
+                                <div className="text-xs text-slate-500">They should pay you</div>
+                              </div>
+                            </div>
+                            
+                            <div className="text-sm font-medium text-green-600">
+                              +{formatCurrency(r.amount, currency)}
+                            </div>
+                          </li>
+                          {idx < incoming.length - 1 && (
+                            <div
+                            role="separator"
+                            aria-hidden
+                            className="h-px bg-gradient-to-r from-transparent via-slate-300 to =-transparent my-2"
+                            />
+                          )}
+                        </React.Fragment>
+                      )
+                    })}
+                  </ul>
+                </div>
+                )
+              } else {
+                // nothing to show (settled) — do not show empty sections
+                return (
+                  <div className="text-center py-6">
+                    <div className="text-lg font-semibold text-slate-700">You are Settled!!</div>
+                    <div className="text-xs text-slate-500 mt-1">No minimal transfers at this time.</div>
+                  </div>
+                )
+              }
+            })()
           ) : (
-            <p className="text-sm text-slate-500">No outstanding balances</p>
-          )}
-      
-          {balances.per_user.length > 3 && (
-            <div className="mt-3 text-right">
-              <Button variant="outline" size="sm">
-                View More
-              </Button>
-            </div>
+            // Fallback: legacy per_user view (if recommendations not returned)
+            <>
+              {balances.per_user.length > 0 ? (
+                <ul className="divide-y divide-slate-200">
+                  {balances.per_user.slice(0, 3).map((cp) => {
+                    const iOweThem = cp.amount < 0
+                    return (
+                      <li key={cp.user_id} className="grid grid-cols-3 items-center gap-4 py-3">
+                        <span className="text-left font-medium">{cp.name}</span>
+                        <div className="flex justify-center">
+                          {iOweThem ? (
+                            <SettleUpCard
+                              tripId={tripId}
+                              currentUser={{ id: session.userId, name: session.name || "You" }}
+                              counterparty={{
+                                id: cp.user_id,
+                                name: cp.name,
+                                amountOwed: Math.abs(cp.amount),
+                                currency,
+                              }}
+                              trigger={
+                                <Button size="sm" variant="secondary" className="bg-blue-100 text-blue-700">
+                                  Settle up →
+                                </Button>
+                              }
+                            />
+                          ) : (
+                            <span className="h-6" />
+                          )}
+                        </div>
+                        <span className={`text-right ${cp.amount > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}`}>
+                          {cp.amount > 0 ? "+" : "-"}
+                          {formatCurrency(Math.abs(cp.amount), currency)}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-500">No outstanding balances</p>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -282,6 +422,7 @@ export default async function ExpensesPage({
               currency={currency}
               tripId={tripId}
               currentUser={{ id: session.userId, name: session.name || "You" }}
+              userRole={userRole}
             />
           ) : (
             <p className="text-sm text-slate-500">No recent activity</p>

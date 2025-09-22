@@ -9,7 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/expenses/formatCurrency"
-import { ArrowRight } from "lucide-react"
+type GradientArrowProps = {
+  height?: number;           // px height of the shaft
+  headRatio?: number;        // fraction of total width used by arrow head (0..1)
+  startColor?: string;
+  endColor?: string;
+  className?: string;        // tailwind classes for sizing (e.g. "w-full")
+  ariaLabel?: string;
+};
 
 type Counterparty = {
   id: number
@@ -24,6 +31,74 @@ type Props = {
   currentUser: { id: number; name: string }
   counterparty: Counterparty
   trigger?: React.ReactNode
+}
+
+export function GradientArrow({
+  height = 14,
+  headRatio = 0.18,
+  startColor = "#ef4444",
+  endColor = "#10b981",
+  className,
+  ariaLabel = "payment arrow",
+}: GradientArrowProps) {
+  const id = React.useId();
+  // viewBox coordinates — we'll use user-space gradient mapping
+  const viewW = 100;
+  const viewH = 24;
+  const headW = viewW * headRatio;
+  const shaftW = viewW - headW;
+  const shaftRadius = Math.max(2, height / 2);
+
+  return (
+    <svg
+      role="img"
+      aria-label={ariaLabel}
+      viewBox={`0 0 ${viewW} ${viewH}`}
+      preserveAspectRatio="none"
+      className={className}
+      style={{ width: "100%", height: `${height}px`, display: "block" }}
+    >
+      <defs>
+        {/* IMPORTANT: gradientUnits="userSpaceOnUse" makes the gradient coordinates use the same
+            user space as the shapes (so it's continuous across rect + polygon). */}
+        <linearGradient id={`g-${id}`} gradientUnits="userSpaceOnUse" x1="0" x2={String(viewW)} y1="0" y2="0">
+          <stop offset="0%" stopColor={startColor} />
+          <stop offset="100%" stopColor={endColor} />
+        </linearGradient>
+      </defs>
+
+      {/* Shaft */}
+      <rect
+        x="0"
+        y={(viewH - height) / 2}
+        rx={shaftRadius}
+        ry={shaftRadius}
+        width={shaftW}
+        height={height}
+        fill={`url(#g-${id})`}
+        stroke="none"
+      />
+
+      {/* Slight overlap polygon so there's no 1px seam: start the polygon a hair earlier (shaftW - 0.5) */}
+      <polygon
+        points={`${shaftW - 0.5},${(viewH - height) / 2} ${viewW},${viewH / 2} ${shaftW - 0.5},${(viewH + height) / 2}`}
+        fill={`url(#g-${id})`}
+        stroke="none"
+      />
+
+      {/* Subtle highlight overlay on shaft (not on head) */}
+      <rect
+        x="0"
+        y={(viewH - height) / 2}
+        rx={shaftRadius}
+        ry={shaftRadius}
+        width={shaftW}
+        height={Math.max(1, height * 0.22)}
+        fill="rgba(255,255,255,0.12)"
+        pointerEvents="none"
+      />
+    </svg>
+  );
 }
 
 export default function SettleUpCard({ tripId, currentUser, counterparty, trigger }: Props) {
@@ -92,19 +167,37 @@ export default function SettleUpCard({ tripId, currentUser, counterparty, trigge
           <DialogTitle className="text-2xl font-bold">Settle Up!!</DialogTitle>
         </DialogHeader>
 
-        <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#00e2b7] to-transparent rounded-full" />
+        {/* Names + gradient arrow between (simplified layout) */}
+        <div className="mt-4">
+          <div className="flex items-center gap-3">
+            {/* Left: payer */}
+            <div className="flex flex-col items-start">
+              <span className="font-semibold text-sm whitespace-nowrap">
+                {currentUser.name}
+              </span>
+              <span className="text-xs text-slate-500">you</span>
+            </div>
 
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between text-sm text-slate-700">
-            <span className="font-semibold">{currentUser.name}</span>
-            <span className="font-semibold">{counterparty.name}</span>
-          </div>
-          <div className="relative h-2 rounded-full overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-green-500 opacity-90" />
-            <ArrowRight className="absolute -right-1 -top-2 h-6 w-6 text-white drop-shadow" />
+            {/* Arrow takes remaining space */}
+            <div className="flex-1">
+              <GradientArrow
+                className="w-full"
+                height={16}
+                headRatio={0.18}
+                startColor="#ef4444"
+                endColor="#10b981"
+                ariaLabel={`Arrow from ${currentUser.name} to ${counterparty.name}`}
+              />
+            </div>
+
+            {/* Right: receiver; whitespace-nowrap keeps it aligned right when space is tight */}
+            <div className="flex flex-col items-start">
+              <span className="font-semibold text-sm whitespace-nowrap text-right">{counterparty.name}</span>
+              <span className="text-xs text-slate-500 whitespace-nowrap text-right">Creditor</span>
+            </div>
           </div>
         </div>
-
+      
         <div className="mt-6 flex items-end gap-2">
           <div className="flex-1">
             <label className="text-xs text-slate-600 block mb-1">

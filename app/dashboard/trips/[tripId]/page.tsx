@@ -1,3 +1,4 @@
+// app/dashboard/trips/[tripId]/page.tsx
 import { verifySession } from "@/lib/auth/session"
 import { db } from "@/lib/db"
 import { trips, tripMembers, users, tripJoinRequests, tripPhotos } from "@/lib/db/schema"
