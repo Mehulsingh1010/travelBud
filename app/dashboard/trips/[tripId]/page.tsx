@@ -59,7 +59,8 @@ export default async function TripPage({ params }: TripPageProps) {
     .where(eq(tripMembers.tripId, tripId))
     .orderBy(desc(tripMembers.joinedAt))
 
- // fetch rows from DB
+
+// fetch rows from DB
  const rows = await db.select().from(tripPhotos).where(eq(tripPhotos.tripId, tripId)).orderBy(tripPhotos.createdAt);
  
  // convert Date -> ISO string so it's serializable & meets client types
