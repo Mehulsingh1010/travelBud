@@ -402,6 +402,16 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
           </CardContent>
       </Card>
 
+      {/* Trip Photos */}
+      <Card>
+          <CardHeader>
+            <CardTitle>Trip Photos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TripPhotosClient tripId={tripId} currentUser={currentUser} initialPhotos={initialPhotos} />
+          </CardContent>
+      </Card>
+
       {/* Trip Management Tabs */}
       <Tabs defaultValue="members" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">

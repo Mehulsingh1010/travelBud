@@ -2,7 +2,9 @@
 "use client"
 
 import useSWR from "swr"
-import { useMemo } from "react"
+import { useState } from "react"
+import {useRouter} from "next/navigation"
+import { Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -130,12 +132,14 @@ export default function ExpenseDetailsModal({
   open,
   onOpenChange,
   currentUser,
+  userRole
 }: {
   tripId: number
   expenseId: number | null
   open: boolean
   onOpenChange: (v: boolean) => void
   currentUser?: { id: number; name?: string }
+  userRole?: string
 }) {
   const { data, isLoading, error } = useSWR<ExpenseDetailsResponse>(
     open && expenseId ? `/api/trips/${tripId}/expenses/${expenseId}` : null,
@@ -147,6 +151,31 @@ export default function ExpenseDetailsModal({
   const splits = data?.splits ?? []
 
   const baseCurrency = expense?.baseCurrency ?? "INR"
+
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  async function onDeleteExpense() {
+    if (!expense) return;
+    if (!confirm("Delete this expense? This cannot be undone.")) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/expenses/${expense.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to delete");
+
+      // success: close modal and refresh
+      onOpenChange(false);
+      router.refresh();
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete expense");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -241,9 +270,22 @@ export default function ExpenseDetailsModal({
               </div>
             </div>
 
+            {/* conditional Delete button — show only for allowed users */}
+            {expense && (currentUser?.id === expense.createdBy || userRole === "creator" || userRole === "admin") && (
+              <div className="flex justify-start mt-4">
+                <button
+                  onClick={onDeleteExpense}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-md 
+                             transition-transform duration-150 ease-in-out hover:scale-105 hover:bg-red-700 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleting ? "Deleting…" : "Delete"}
+                </button>
+              </div>
+            )}
             {/* Comments */}
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Comments</h4>
               {expense?.id ? (
                 <ExpenseComments tripId={tripId} expenseId={expense.id} currentUser={currentUser} />
               ) : (

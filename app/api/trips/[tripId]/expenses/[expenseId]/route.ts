@@ -1,7 +1,8 @@
+// app/api/trips/[tripId]/expenses/[expenseId]/route.ts
 import { NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { trips, users } from "@/lib/db/schema"
+import { trips, tripMembers, users } from "@/lib/db/schema"
 import { expenses, expensePayers, expenseSplits } from "@/lib/db/payments"
 
 type RouteParams = {
@@ -78,5 +79,53 @@ export async function GET(_req: Request, { params }: RouteParams) {
   } catch (err: any) {
     console.error(err)
     return NextResponse.json({ error: err.message ?? "Server error" }, { status: 500 })
+  }
+}
+
+// app/api/trips/[tripId]/expenses/[expenseId]/route.ts
+import { verifySession } from "@/lib/auth/session";
+// import { trips, tripMembers, expenses } from "@/lib/db/schema"; // adjust if your exports differ
+
+export async function DELETE(_req: Request, { params }: { params: { tripId: string; expenseId: string } }) {
+  try {
+    const session = await verifySession().catch(() => null);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const tripId = Number(params.tripId);
+    const expenseId = Number(params.expenseId);
+    if (!Number.isFinite(tripId) || !Number.isFinite(expenseId)) {
+      return NextResponse.json({ error: "Invalid ids" }, { status: 400 });
+    }
+
+    // Ensure trip exists
+    const tripRow = await db.query.trips.findFirst({ where: eq(trips.id, tripId) });
+    if (!tripRow) return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+
+    // Fetch expense to get createdBy
+    const exp = await db.query.expenses.findFirst({ where: and(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)) });
+    if (!exp) return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+
+    // Check permission: owner (createdBy) OR trip admin/creator
+    if (exp.createdBy === session.userId) {
+      // owner -> allowed
+    } else {
+      // check membership role
+      const membership = await db.query.tripMembers.findFirst({
+        where: and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, session.userId)),
+      });
+      const role = membership?.role ?? null;
+      if (!(role === "creator" || role === "admin")) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
+    // Perform deletion. Use cascading delete in DB (if configured) or do transactional deletes.
+    // Here we do a DELETE on expenses row — adjust if you want soft-delete: set isDeleted flag instead.
+    await db.delete(expenses).where(eq(expenses.id, expenseId));
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (err: any) {
+    console.error("[DELETE expense]", err);
+    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
   }
 }
