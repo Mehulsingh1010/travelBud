@@ -47,3 +47,13 @@ CREATE TABLE IF NOT EXISTS user_locations (
 CREATE INDEX IF NOT EXISTS idx_user_locations_trip_id ON user_locations(trip_id);
 CREATE INDEX IF NOT EXISTS idx_user_locations_timestamp ON user_locations(timestamp);
 CREATE INDEX IF NOT EXISTS idx_trips_invite_code ON trips(invite_code);
+
+CREATE TABLE IF NOT EXISTS trip_photos (
+  id serial PRIMARY KEY,
+  trip_id integer NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  user_id integer NOT NULL REFERENCES users(id),
+  url text NOT NULL,
+  caption text,
+  delete_url text,
+  created_at timestamptz DEFAULT now()
+);
