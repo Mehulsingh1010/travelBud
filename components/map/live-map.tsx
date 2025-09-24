@@ -52,9 +52,9 @@ useEffect(() => {
       // Change this line to set the view to Mumbai's coordinates
       const mapInstance = L.map(mapRef.current!).setView([18.9404, 72.8351], 12);
 
-      L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", {
-        attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>',
-        maxZoom: 50,
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
       }).addTo(mapInstance);
 
       mapInstance.zoomControl.remove();
