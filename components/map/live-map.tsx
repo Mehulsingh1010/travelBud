@@ -29,29 +29,41 @@ export function LiveMap({ tripId, tripName, members }: LiveMapProps) {
   const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([])
   const { toast } = useToast()
 
+const staticNearbyMembers = [
+  { id: 101, name: "Gateway of India", latitude: 18.9219, longitude: 72.8347, lastUpdate: new Date().toISOString() },
+  { id: 102, name: "Marine Drive", latitude: 18.9409, longitude: 72.8252, lastUpdate: new Date().toISOString() },
+  { id: 103, name: "Chhatrapati Shivaji Terminus", latitude: 18.9404, longitude: 72.8351, lastUpdate: new Date().toISOString() },
+];
+
   // Initialize map
-  useEffect(() => {
-    if (typeof window !== "undefined" && mapRef.current && !map) {
-      // Dynamically import Leaflet
-      import("leaflet").then((L) => {
-        // Fix for default markers
-        delete (L.Icon.Default.prototype as any)._getIconUrl
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-        })
+// Initialize map
+useEffect(() => {
+  if (typeof window !== "undefined" && mapRef.current && !map) {
+    // Dynamically import Leaflet
+    import("leaflet").then((L) => {
+      // Fix for default markers
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+      });
 
-        const mapInstance = L.map(mapRef.current!).setView([40.7128, -74.006], 13)
+      // Change this line to set the view to Mumbai's coordinates
+      const mapInstance = L.map(mapRef.current!).setView([18.9404, 72.8351], 12);
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(mapInstance)
+      L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", {
+        attribution: '© <a href="https://stadiamaps.com/">Stadia Maps</a>',
+        maxZoom: 50,
+      }).addTo(mapInstance);
 
-        setMap(mapInstance)
-      })
-    }
-  }, [map])
+      mapInstance.zoomControl.remove();
+      mapInstance.attributionControl.setPrefix("");
+
+      setMap(mapInstance);
+    });
+  }
+}, [map]);
 
   // Get user's current location
   const getCurrentLocation = () => {
@@ -72,16 +84,25 @@ export function LiveMap({ tripId, tripName, members }: LiveMapProps) {
         if (map) {
           map.setView([latitude, longitude], 15)
 
-          // Add user marker
           import("leaflet").then((L) => {
             const userIcon = L.divIcon({
-              html: '<div class="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>',
+              html: `<div class="relative">
+                       <div class="absolute inset-0 w-5 h-5 bg-blue-400 rounded-full animate-ping opacity-75"></div>
+                       <div class="relative w-5 h-5 bg-blue-500 rounded-full border-3 border-white shadow-xl"></div>
+                     </div>`,
               className: "custom-div-icon",
-              iconSize: [16, 16],
-              iconAnchor: [8, 8],
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
             })
 
-            L.marker([latitude, longitude], { icon: userIcon }).addTo(map).bindPopup("You are here")
+            L.marker([latitude, longitude], { icon: userIcon })
+              .addTo(map)
+              .bindPopup(`
+              <div class="text-center p-2">
+                <div class="font-semibold text-slate-800">You are here</div>
+                <div class="text-xs text-slate-600 mt-1">Live location</div>
+              </div>
+            `)
           })
         }
 
@@ -167,24 +188,57 @@ export function LiveMap({ tripId, tripName, members }: LiveMapProps) {
     })
   }
 
-  // Add member markers to map
   useEffect(() => {
-    if (map && members.length > 0) {
+    if (map) {
       import("leaflet").then((L) => {
+        // Add static nearby members
+        staticNearbyMembers.forEach((member, index) => {
+          const colors = ["bg-emerald-500", "bg-violet-500", "bg-orange-500"]
+          const memberIcon = L.divIcon({
+            html: `<div class="relative group">
+                     <div class="w-8 h-8 ${colors[index]} rounded-full border-3 border-white shadow-lg flex items-center justify-center transition-transform group-hover:scale-110">
+                       <span class="text-white text-sm font-bold">${member.name.charAt(0)}</span>
+                     </div>
+                     <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 ${colors[index]} rounded-full opacity-60"></div>
+                   </div>`,
+            className: "custom-div-icon",
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          })
+
+          L.marker([member.latitude, member.longitude], { icon: memberIcon })
+            .addTo(map)
+            .bindPopup(`
+              <div class="text-center p-3 min-w-[120px]">
+                <div class="font-semibold text-slate-800">${member.name}</div>
+                <div class="text-xs text-emerald-600 mt-1">● Online now</div>
+                <div class="text-xs text-slate-500 mt-1">Nearby member</div>
+              </div>
+            `)
+        })
+
+        // Add existing members with updated styling
         members.forEach((member) => {
           if (member.latitude && member.longitude) {
             const memberIcon = L.divIcon({
-              html: `<div class="w-6 h-6 bg-purple-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">${member.name.charAt(0)}</div>`,
+              html: `<div class="relative group">
+                       <div class="w-7 h-7 bg-slate-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center transition-transform group-hover:scale-110">
+                         <span class="text-white text-xs font-bold">${member.name.charAt(0)}</span>
+                       </div>
+                     </div>`,
               className: "custom-div-icon",
-              iconSize: [24, 24],
-              iconAnchor: [12, 12],
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
             })
 
             L.marker([member.latitude, member.longitude], { icon: memberIcon })
               .addTo(map)
-              .bindPopup(
-                `${member.name}<br/>Last seen: ${member.lastUpdate ? new Date(member.lastUpdate).toLocaleTimeString() : "Unknown"}`,
-              )
+              .bindPopup(`
+                <div class="text-center p-3">
+                  <div class="font-semibold text-slate-800">${member.name}</div>
+                  <div class="text-xs text-slate-600 mt-1">Last seen: ${member.lastUpdate ? new Date(member.lastUpdate).toLocaleTimeString() : "Unknown"}</div>
+                </div>
+              `)
           }
         })
       })
@@ -227,96 +281,148 @@ export function LiveMap({ tripId, tripName, members }: LiveMapProps) {
 
   return (
     <div className="space-y-6">
-      {/* Map Controls */}
-      <Card className="shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-blue-600" />
-            {tripName} - Live Map
+      <Card className="bg-gradient-to-br from-slate-50 to-white border-0 shadow-xl">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-slate-800">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <MapPin className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <div className="text-lg font-semibold">{tripName}</div>
+              <div className="text-sm text-slate-500 font-normal">Live Location Tracking</div>
+            </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <CardContent className="space-y-6">
+          <div className="flex flex-wrap gap-3">
             <Button
               onClick={getCurrentLocation}
               disabled={isSharing}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg transition-all duration-200"
             >
               <Navigation className="w-4 h-4 mr-2" />
               {isSharing ? "Sharing Location" : "Share Location"}
             </Button>
 
             {isSharing && (
-              <Button onClick={stopLocationSharing} variant="outline">
+              <Button
+                onClick={stopLocationSharing}
+                variant="outline"
+                className="border-slate-300 hover:bg-slate-50 bg-transparent"
+              >
                 Stop Sharing
               </Button>
             )}
 
-            <Button onClick={() => findNearbyPlaces("restaurant")} variant="outline">
+            <Button
+              onClick={() => findNearbyPlaces("restaurant")}
+              variant="outline"
+              className="border-slate-300 hover:bg-slate-50"
+            >
               <Utensils className="w-4 h-4 mr-2" />
               Restaurants
             </Button>
 
-            <Button onClick={() => findNearbyPlaces("cafe")} variant="outline">
+            <Button
+              onClick={() => findNearbyPlaces("cafe")}
+              variant="outline"
+              className="border-slate-300 hover:bg-slate-50"
+            >
               <Coffee className="w-4 h-4 mr-2" />
               Cafes
             </Button>
 
-            <Button onClick={() => findNearbyPlaces("gas_station")} variant="outline">
+            <Button
+              onClick={() => findNearbyPlaces("gas_station")}
+              variant="outline"
+              className="border-slate-300 hover:bg-slate-50"
+            >
               <Car className="w-4 h-4 mr-2" />
               Gas Stations
             </Button>
           </div>
 
-          {/* Trip Members Status */}
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {members.length} Members
-            </Badge>
-            {members.map((member) => (
-              <Badge
-                key={member.id}
-                variant={member.latitude && member.longitude ? "default" : "secondary"}
-                className="flex items-center gap-1"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${member.latitude && member.longitude ? "bg-green-500" : "bg-gray-400"}`}
-                />
-                {member.name}
-              </Badge>
-            ))}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Users className="w-4 h-4" />
+              Trip Members
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Nearby Members */}
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Nearby Now</div>
+                <div className="flex flex-wrap gap-2">
+                  {staticNearbyMembers.map((member, index) => {
+                    const colors = ["bg-emerald-500", "bg-violet-500", "bg-orange-500"]
+                    return (
+                      <Badge
+                        key={member.id}
+                        className={`${colors[index]} hover:${colors[index]}/90 text-white border-0`}
+                      >
+                        <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
+                        {member.name}
+                      </Badge>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Other Members */}
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">Other Members</div>
+                <div className="flex flex-wrap gap-2">
+                  {members.map((member) => (
+                    <Badge
+                      key={member.id}
+                      variant={member.latitude && member.longitude ? "default" : "secondary"}
+                      className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-0"
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full mr-2 ${member.latitude && member.longitude ? "bg-green-500" : "bg-slate-400"}`}
+                      />
+                      {member.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Map Container */}
-      <Card className="shadow-lg border-0">
+      <Card className="overflow-hidden border-0 shadow-2xl">
         <CardContent className="p-0">
-          <div ref={mapRef} className="w-full h-96 rounded-lg" style={{ minHeight: "400px" }} />
+          <div ref={mapRef} className="w-full h-[500px]" style={{ minHeight: "500px" }} />
         </CardContent>
       </Card>
 
-      {/* Nearby Places */}
       {nearbyPlaces.length > 0 && (
-        <Card className="shadow-lg border-0">
+        <Card className="bg-gradient-to-br from-green-50 to-white border-0 shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Coffee className="w-5 h-5 text-green-600" />
+            <CardTitle className="flex items-center gap-3 text-slate-800">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Coffee className="w-5 h-5 text-green-600" />
+              </div>
               Nearby Places
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="grid gap-3">
               {nearbyPlaces.map((place, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+                >
                   <div>
-                    <h4 className="font-medium text-slate-900">{place.name}</h4>
+                    <h4 className="font-semibold text-slate-900">{place.name}</h4>
                     <p className="text-sm text-slate-600 capitalize">{place.type.replace("_", " ")}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-slate-900">{place.distance}</p>
-                    <p className="text-xs text-slate-500">★ {place.rating}</p>
+                    <p className="text-sm font-semibold text-slate-900">{place.distance}</p>
+                    <p className="text-xs text-amber-600 flex items-center justify-end gap-1">
+                      <span>★</span> {place.rating}
+                    </p>
                   </div>
                 </div>
               ))}
