@@ -391,16 +391,6 @@ export function TripManagement({ trip, members, joinRequests, currentUser, userR
       )}
       {/* Expense Summary */}
       <ExpenseSummaryCard tripId={tripId} balances={balances} />
-      
-      {/* Trip Photos */}
-      <Card>
-          <CardHeader>
-            <CardTitle>Trip Photos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TripPhotosClient tripId={tripId} currentUser={currentUser} initialPhotos={initialPhotos} />
-          </CardContent>
-      </Card>
 
       {/* Trip Photos */}
       <Card>
